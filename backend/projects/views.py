@@ -5,6 +5,7 @@ from django.db import connection
 from users.serializers import UserSerializer
 from .models import Project, Membership, Task
 from .serializers import ProjectDetailSerializer, TaskSerializer
+from .airtable_export import ExportError, export_project_tasks
 
 
 def _get_membership(user, project_id):
@@ -240,5 +241,7 @@ class ExportView(APIView):
         if not _can_edit_tasks(membership.role):
             return Response({'error': 'only admins and members can export'}, status=status.HTTP_403_FORBIDDEN)
 
-        tasks = Task.objects.filter(project_id=project_id).select_related('assignee', 'created_by')
-        return Response({'exported': 0, 'tasks': TaskSerializer(tasks, many=True).data})
+        try:
+            return Response(export_project_tasks(project_id))
+        except ExportError as error:
+            return Response({'error': str(error)}, status=error.status_code)

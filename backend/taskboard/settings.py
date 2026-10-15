@@ -1,8 +1,12 @@
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load local server configuration without overriding deployed environment values.
+load_dotenv(BASE_DIR.parent / '.env', override=False)
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-change-me-in-production')
 DEBUG = os.environ.get('DEBUG', 'true').lower() == 'true'
@@ -54,6 +58,11 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+AIRTABLE_API_KEY = os.environ.get('AIRTABLE_API_KEY', '')
+AIRTABLE_BASE_ID = os.environ.get('AIRTABLE_BASE_ID', '')
+AIRTABLE_TABLE_NAME = os.environ.get('AIRTABLE_TABLE_NAME', 'Tasks')
+AIRTABLE_NODE_BINARY = os.environ.get('AIRTABLE_NODE_BINARY', 'node')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LANGUAGE_CODE = 'en-us'

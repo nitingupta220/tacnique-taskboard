@@ -19,6 +19,7 @@ docker-compose exec backend python manage.py seed
 
 # Run the test suites
 docker-compose exec backend python -m pytest          # Django tests
+docker-compose exec backend node --test airtable      # Airtable SDK tests
 docker-compose exec frontend npm test                 # React tests
 
 # The app is now running at http://localhost:3000
@@ -38,10 +39,12 @@ chmod +x bin/setup
 # Backend
 cd backend
 pip install -r requirements.txt
-cp ../.env.example ../.env   # edit POSTGRES_* if your local setup differs
+npm --prefix airtable ci --ignore-scripts
+# Create ../.env with the environment settings below, or copy your local .env.example.
 python manage.py migrate
 python manage.py seed
 python -m pytest
+node --test airtable
 
 # Frontend
 cd ../frontend
@@ -113,17 +116,48 @@ curl -H "Authorization: Bearer <token>" http://localhost:8000/api/projects
 ### Export
 - `POST /api/projects/:id/export` — Export tasks to Airtable (admin or member)
 
-## Airtable Export (Part 3c)
+## Airtable Export
 
-Set these in your `.env` before running the export:
+Enter credentials in the **root `.env`** (next to this README), then restart the backend. Both `.env` and the local `.env.example` are ignored by Git. Django loads this file without overriding existing environment variables. Docker Compose passes the Airtable settings only to the backend. Never put credentials in `VITE_*` variables or frontend files.
 
-```
-AIRTABLE_API_KEY=your_personal_access_token
-AIRTABLE_BASE_ID=appXXXXXXXXXXXXXX
+```dotenv
+POSTGRES_DB=taskboard
+POSTGRES_USER=taskboard
+POSTGRES_PASSWORD=taskboard
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+AIRTABLE_API_KEY=<personal-access-token>
+AIRTABLE_BASE_ID=<base-id>
 AIRTABLE_TABLE_NAME=Tasks
 ```
 
-The backend uses `pyairtable` for real API calls. `backend/projects/airtable_mock.py` is a test double — use it in unit tests, not in production code.
+The token needs `data.records:read` and `data.records:write` access to the configured base. Configure these editable fields in its target table:
+
+| Field | Airtable type |
+|-------|--------------|
+| Task ID | Single line text (stable Taskboard UUID, used for upserts) |
+| Project ID | Single line text or Long text |
+| Title | Single line text |
+| Task Description | Long text |
+| Status | Single line text |
+| Assignee | Single line text |
+| Position | Number (integer) |
+
+An existing AI-generated `Description` field can remain; the exporter writes to `Task Description`. Schema changes are a setup step, not part of an export. Do not use a computed or AI field for exported values.
+
+Project admins and members see **export to Airtable** on the project detail page; viewers cannot export. `POST /api/projects/:id/export` checks membership and loads tasks directly from PostgreSQL. It ignores client-supplied task data. A successful request returns, for example:
+
+```json
+{"total":3,"created":1,"updated":1,"failed":1,"failures":[{"taskId":"<uuid>","title":"Example task","error":"Airtable rejected the field values. Check the table schema and task."}]}
+```
+
+The Django service invokes a small server-side Node process using the **official `airtable` npm package**, installed in `backend/airtable`. Node 20+ must be on the backend PATH; `AIRTABLE_NODE_BINARY` can select another executable. Docker includes Node and the package. No additional service or local export state is required.
+
+Exports support up to 1,000 tasks, read Airtable records in pages of 100, and write batches of 10 with Airtable `performUpsert` keyed by `Task ID`. Repeated exports update the same records, including after an ambiguous network failure. Existing duplicate Task IDs are reported as failures for those tasks. Unrelated rows and extra Airtable columns are preserved; exports do not delete remote rows or change local tasks.
+
+Calls are spaced by at least 250 ms. Transient connection errors, HTTP 500/502/503/504, and rate limits get at most two retries. Backoff is 500 ms then 1 second for server/network errors, or 30 then 60 seconds for rate limits; the SDK's automatic rate-limit retries are disabled. A 120-second budget bounds the export. Permanent failures have no backoff retry. Rejected multi-record batches (413/422) are split into smaller diagnostic batches to isolate invalid records, then other tasks continue; a rejected singleton is not retried. Global credential/schema errors stop further API calls and report remaining tasks as failed. Failed or uncertain tasks can safely be exported again.
+
+Run `python -m pytest` from `backend`, `node --test` from `backend/airtable`, and `npm test` from `frontend`. Automated tests use fake credentials and a local HTTP server, never the configured real base. `backend/projects/airtable_mock.py` is a legacy test double and is not used by the integration.
 
 ## Tech Stack
 

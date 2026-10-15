@@ -1,4 +1,11 @@
 export type Role = "admin" | "member" | "viewer";
+export type ExportResult = {
+  total: number;
+  created: number;
+  updated: number;
+  failed: number;
+  failures: { taskId: string; title: string; error: string }[];
+};
 export type TaskStatus = "todo" | "in_progress" | "review" | "done";
 
 export type ApiUser = {

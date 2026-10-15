@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, getToken } from "@/lib/api-client";
+import { apiFetch, getToken, getStoredUser } from "@/lib/api-client";
+import { ExportButton } from "@/components/ExportButton";
 import { Header } from "@/components/Header";
 import { StatusColumn } from "@/components/StatusColumn";
 import { TaskDetail } from "@/components/TaskDetail";
@@ -86,6 +87,11 @@ export default function ProjectPage() {
                   owner: {project.owner.name} · {project.memberships.length} members
                 </p>
               </div>
+              <ExportButton
+                key={project.id}
+                projectId={project.id}
+                role={project.memberships.find(m => m.user.id === getStoredUser()?.id)?.role}
+              />
             </div>
 
             <section className="bg-surface border border-border rounded-lg p-4 mb-6">
