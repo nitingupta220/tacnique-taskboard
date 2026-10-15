@@ -169,7 +169,7 @@ Primary references: [Django deployment checklist](https://docs.djangoproject.com
 
 ### Official Airtable npm package retained
 
-`backend/airtable/package.json` pins `airtable@0.12.2`; `exporter.mjs` imports it, constructs the official client and calls its `base.makeRequest` against `https://api.airtable.com`. Django invokes the checked-in bridge without a shell; its tests exercise the real SDK against a local fake HTTP endpoint. This satisfies the user's explicit npm requirement; it has not been replaced by pyairtable. [Official Airtable JavaScript SDK source](https://github.com/Airtable/airtable.js) identifies that npm package. The original assignment's Python-SDK wording remains a documented rubric difference, not an unimplemented npm integration.
+`backend/airtable/package.json` pins `airtable@0.12.2`; `exporter.mjs` imports it, constructs the official client and calls its `base.makeRequest` against `https://api.airtable.com`. Django invokes the checked-in bridge without a shell; its tests exercise the real SDK against a local fake HTTP endpoint. This satisfies both the supplied original assignment and the user's explicit npm requirement; it has not been replaced by pyairtable. [Official Airtable JavaScript SDK source](https://github.com/Airtable/airtable.js) identifies that npm package. Earlier documentation incorrectly treated a differing legacy repository brief as the original; there is no Python-SDK rubric deviation.
 
 ### External incident follow-up remains open
 
@@ -178,4 +178,4 @@ Primary references: [Django deployment checklist](https://docs.djangoproject.com
 - Unsafe original PostCSS code remains in old commits under the no-history-rewrite instruction; do not execute those revisions. Current executable configuration is legitimate.
 - The broader frontend/backend field-naming mismatch remains technical debt; the verified task-editor unassignment bug is fixed and its regression passes.
 
-The original seed rows and existing audit comments were preserved. The final repository security fixes and advisory checks pass; incident closure and submission recordings/screenshots remain external follow-ups. See [COMPLIANCE_AUDIT.md](COMPLIANCE_AUDIT.md) and [TERMINAL_LOG.md](TERMINAL_LOG.md) for explicit evidence gaps and checks.
+The original seed rows and existing audit comments were preserved. The final repository security fixes and advisory checks pass. Both actual recording and Airtable shared-view links are included; recording limits and external incident follow-ups remain explicit. Reading the public shared view does not verify token rotation or trigger an export. See [COMPLIANCE_AUDIT.md](COMPLIANCE_AUDIT.md) and [TERMINAL_LOG.md](TERMINAL_LOG.md) for evidence and checks.

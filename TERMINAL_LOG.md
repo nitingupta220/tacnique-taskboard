@@ -1,41 +1,538 @@
 # Taskboard terminal evidence — final compilation
 
-Originally compiled 2026-10-15T11:24:53.108804+00:00 at feature HEAD `88b21fe`; updated after security hardening at source HEAD `e480e07`. Earlier checkpoint results remain historical; the final hardening results below supersede their open JWT/dependency findings. This is an ordered compilation of retained real captures, not a newly invented continuous terminal session. Original capture dates are retained. Required order: setup → initial tests → bug proof → fix proof → real Airtable export → comments/activity demos → final audit/tests. The intervening PostCSS investigation remains between export and comments, where it occurred.
+Originally compiled 2026-10-15T11:24:53.108804+00:00 at feature HEAD `88b21fe`; updated after security hardening at source HEAD `e480e07`, then corrected against the supplied original assignment after recording-link commit `b60463b`. Original setup/test captures have now been recovered into sections 1–2; later historical statements that they were missing describe earlier searches. Earlier checkpoint results remain historical; the final hardening results below supersede their open JWT/dependency findings. This is an ordered compilation of retained real captures, not a newly invented continuous terminal session. Original capture dates are retained. Required order: setup → initial tests → bug proof → fix proof → real Airtable export → comments/activity demos → final audit/tests. The intervening PostCSS investigation remains between export and comments, where it occurred.
 
 Credential handling: tokens, passwords and configured base identifiers are redacted. Raw curl wire traces split credentials across fixed-width lines, so those 26 trace blocks are omitted; separately captured requests and HTTP responses remain. Original Content-Length/byte-count/SHA values describe the private original captures, not the redacted text. Historical statements about an unchanged raw prefix/local-only log describe those earlier checkpoints, before this final redaction/reordering. The final filename is normalized to `TERMINAL_LOG.md`; originals remain outside the repository in a mode-0700 directory.
 
 Original pre-audit log SHA-256: `d66e387760fd5f2aa95635857ba3f4b86d7a74f6629fa4520b1056bd513b3cee`. No credential value is printed here. The raw original is not a submission file.
 
-## 1. Setup output and issues
+## 1. Original setup output and issues
 
-**MISSING ORIGINAL OUTPUT:** no initial setup transcript was found in retained project evidence. The first retained running-app request is 2026-10-15 08:38 UTC. The commands/output below are current audit checks only; they are not relabeled as original setup evidence. No seed command or historical infected checkout was executed to manufacture a replacement.
+Recovered on 2026-10-15 from the original local tool-execution log `rollout-2026-10-15T13-38-49-01a13e9b-5358-7f33-b922-0c65ce5fe070.jsonl`, selecting only setup/test commands and their actual responses from 08:14–08:30 UTC. Source line numbers below refer to that private JSONL. No historical commands, dependencies, infected config, migrations or seed operations were rerun to recover these captures. No conversation text has been copied. Passwords are redacted; terminal color escapes are removed. Setup and tests originally ran concurrently, so their UTC timestamps overlap across these required sections.
 
-Current inspection topology: existing PostgreSQL `taskboard_inspection` on loopback port 55432, backend on 8001, frontend on 3000. Fresh Docker defaults instead use 5432/8000/3000; README distinguishes them. Global npm remains truncated; tests/build used the integrity-verified private runtime. Docker setup instructions were reviewed, not freshly built.
+### Python environment creation
 
+Original command at 2026-10-15T08:14:46.063Z; working directory `repository root`. Captures: 2026-10-15T08:14:47.297Z (source line 52).
 
-```json
-[
-  {
-    "url": "http://127.0.0.1:3000",
-    "httpStatus": 200,
-    "note": "frontend accessible"
-  },
-  {
-    "url": "http://127.0.0.1:8001/api/projects",
-    "httpStatus": 401,
-    "note": "401 expected without authentication"
-  },
-  {
-    "url": "http://127.0.0.1:3000/api/projects",
-    "httpStatus": 401,
-    "note": "401 expected without authentication"
-  }
-]
+```bash
+uv venv --python /usr/local/bin/python3.12 .venv && uv pip install --python .venv/bin/python -r backend/requirements.txt
 ```
 
-## 2. Initial test run
 
-**MISSING ORIGINAL OUTPUT:** no complete initial, pre-change backend/frontend test transcript was found. The SQL-fix red/green tests and later feature/security suites are retained below under their actual stages; they do not substitute for the initial suite. Current final test results appear in section 7. Recover the original terminal/session output if available; do not present newly run tests as historical evidence.
+
+```text
+Using CPython 3.12.11 interpreter at: /usr/local/opt/python@3.12/bin/python3.12
+Creating virtual environment at: .venv
+Activate with: source .venv/bin/activate
+```
+
+SHA-256 of the retained original output chunks before redaction: `677ac3d163f5e9657e53cc9a266fefecbba9403ab8aa2138d73aefae803d2fb0`.
+
+The same install completed with exit 0, captured at 2026-10-15T08:15:05.248Z (source line 61; that wrapper also contains an unrelated truncated skill read, excluded here):
+
+```text
+Resolved 26 packages in 1.98s
+Downloading django (7.9MiB)
+Downloading pygments (1.2MiB)
+Downloading psycopg2-binary (3.6MiB)
+Downloading pydantic-core (2.1MiB)
+ Downloaded pydantic-core
+ Downloaded psycopg2-binary
+ Downloaded pygments
+ Downloaded django
+Prepared 20 packages in 4.03s
+Installed 26 packages in 426ms
+ + annotated-types==0.8.0
+ + asgiref==3.12.1
+ + certifi==2026.7.22
+ + charset-normalizer==3.5.2
+ + django==5.2.18
+ + django-cors-headers==4.9.0
+ + djangorestframework==3.18.3
+ + djangorestframework-simplejwt==5.5.1
+ + idna==3.20
+ + inflection==0.5.1
+ + iniconfig==2.3.1
+ + packaging==26.3
+ + pluggy==1.6.0
+ + psycopg2-binary==2.9.13
+ + pyairtable==2.3.7
+ + pydantic==2.14.1
+ + pydantic-core==2.50.1
+ + pygments==2.21.0
+ + pyjwt==2.15.1
+ + pytest==8.4.2
+ + pytest-django==4.14.0
+ + requests==2.34.2
+ + sqlparse==0.6.0
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.4
+ + urllib3==2.8.0
+```
+
+Retained dependency-output SHA-256: `81495daf473494db01d39d329d6e7f90fd2cbe165cb714bb79bc203608e548f2`. The historical `pyairtable` dependency was present in the starter; it is not the original assignment's SDK requirement.
+
+### Initial Node/npm failure
+
+Original command at 2026-10-15T08:14:46.063Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:14:47.297Z (source line 52).
+
+```bash
+npm install --no-package-lock --no-audit --no-fund
+```
+
+Exit 134: the system Node binary could not load ICU. This is a genuine original setup failure.
+
+```text
+dyld[36334]: Library not loaded: '/usr/local/opt/icu4c/lib/libicui18n.74.dylib'
+  Referenced from: '/usr/local/Cellar/node/22.6.0/bin/node'
+  Reason: tried: '/usr/local/opt/icu4c/lib/libicui18n.74.dylib' (no such file), '/usr/local/lib/libicui18n.74.dylib' (no such file), '/usr/lib/libicui18n.74.dylib' (no such file), '/usr/local/Cellar/icu4c@78/78.3/lib/libicui18n.74.dylib' (no such file), '/usr/local/lib/libicui18n.74.dylib' (no such file), '/usr/lib/libicui18n.74.dylib' (no such file)
+```
+
+SHA-256 of the retained original output chunks before redaction: `110918ec9a532f6d96ce8a9109901e24c5baafdd5f98d76d6186f3964a893b2e`.
+
+### Frontend dependencies installed using the available Node runtime
+
+Original command at 2026-10-15T08:16:30.270Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:17:56.696Z (source line 148).
+
+```bash
+export PATH=/Users/nitingupta/.nvm/versions/node/v22.20.0/bin:$PATH
+npm install --no-package-lock --no-audit --no-fund
+```
+
+The original command selected the existing NVM Node 22.20.0 runtime. Exit 0; a missing DOM peer dependency still affected the first completed frontend suite below.
+
+```text
+added 234 packages in 1m
+```
+
+SHA-256 of the retained original output chunks before redaction: `8f582f9453eacdefd82c521b710ad61325d7df4fe97c8bf5d3b52fcb486c523b`.
+
+### Original frontend server startup
+
+Original command at 2026-10-15T08:18:07.833Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:18:30.805Z (source line 162).
+
+```bash
+export PATH=/Users/nitingupta/.nvm/versions/node/v22.20.0/bin:$PATH
+npm run dev -- --host 127.0.0.1 --strictPort
+```
+
+Original server startup output; the proxy was subsequently pointed to the inspection backend on port 8001.
+
+```text
+> taskboard-frontend@1.0.0 dev
+> vite --host 127.0.0.1 --strictPort
+
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+  VITE v5.4.21  ready in 4523 ms
+
+  ➜  Local:   http://127.0.0.1:3000/
+```
+
+SHA-256 of the retained original output chunks before redaction: `1709e0b3a2a3bb116f2134415a505626454c2ed06ff03993b71c2eae7e10e150`.
+
+### PostgreSQL image pull failed
+
+Original command at 2026-10-15T08:18:44.602Z; working directory `repository root`. Captures: 2026-10-15T08:19:06.698Z (source line 175); 2026-10-15T08:20:09.813Z (source line 195).
+
+```bash
+docker run --name taskboard-inspection-db-20261015 --label taskboard.purpose=read-only-codebase-inspection --memory=256m -d -p 127.0.0.1:55432:5432 -e POSTGRES_DB=taskboard_inspection -e POSTGRES_USER=taskboard -e POSTGRES_PASSWORD=<REDACTED> postgres:16-alpine
+```
+
+Exit 125: Docker Hub request timeout. A new postgres:16-alpine image was not obtained.
+
+```text
+Unable to find image 'postgres:16-alpine' locally
+docker: Error response from daemon: Get "https://registry-1.docker.io/v2/": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers).
+See 'docker run --help'.
+```
+
+SHA-256 of the retained original output chunks before redaction: `3275ed0c9c3c8ee9357817c61f6881e2e63d79fc5975f38cd2ad9ed909934328`.
+
+The original setup then reused the already-cached PostgreSQL image `9cfa957fae1d` in a separate loopback-bound container; actual migration output below identifies it as PostgreSQL **17.6**, rather than the Compose default 16. Existing application databases were not reseeded during setup. The first `pg_isready` probe preceded readiness; migrations subsequently succeeded.
+
+### Isolated database and initial migrations
+
+Original command at 2026-10-15T08:21:37.313Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/backend`. Captures: 2026-10-15T08:22:04.406Z (source line 238).
+
+```bash
+docker exec taskboard-inspection-db-20261015 pg_isready -U taskboard -d taskboard_inspection; docker exec taskboard-inspection-db-20261015 postgres --version; POSTGRES_DB=taskboard_inspection POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55432 ../.venv/bin/python manage.py migrate --noinput && POSTGRES_DB=taskboard_inspection POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55432 ../.venv/bin/python -m pytest -v --tb=short
+```
+
+Only the migration/setup portion of this combined command output is shown here; its pytest continuation is in section 2. All 16 original migrations applied successfully.
+
+```text
+/var/run/postgresql:5432 - no response
+postgres (PostgreSQL) 17.6 (Debian 17.6-1.pgdg12+1)
+Operations to perform:
+  Apply all migrations: auth, contenttypes, projects, users
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0001_initial... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying users.0001_initial... OK
+  Applying projects.0001_initial... OK
+```
+
+SHA-256 of the retained original output chunks before redaction: `93db05d23cb3137f2df757fa50db52428efeb6c01ac7d2d07924f63b0f25c47f`.
+
+### Original backend startup and accessibility
+
+Original command at 2026-10-15T08:21:59.319Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/backend`. Captures: 2026-10-15T08:22:34.503Z (source line 245).
+
+```bash
+POSTGRES_DB=taskboard_inspection POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55432 ../.venv/bin/python manage.py runserver 127.0.0.1:8001 --noreload
+```
+
+Original retained server access lines. Subsequent health requests in source line 255 returned HTTP 200 through both the backend and frontend proxy; login verification follows the authorized seed load below.
+
+```text
+[15/Oct/2026 08:22:31] "GET /api/health HTTP/1.1" 200 12
+[15/Oct/2026 08:22:31] "GET /api/health HTTP/1.1" 200 12
+```
+
+SHA-256 of the retained original output chunks before redaction: `f391b2803e9a4cfb98b40e66aeb75a48c256a178eabbdf6ce5b1d24637d5f14a`.
+
+The workstation also had `legacy-peer-deps=true` in its npm configuration and a zero-byte global npm `lib/cli.js`. The initial frontend peer installation was repaired with a separately unpacked npm 10.9.3 and `--legacy-peer-deps=false`; this did not fix the global npm installation. Later trusted-toolchain/security remediation is recorded at its actual checkpoint below. Current runtime ports remain 55432/8001/3000; fresh Compose defaults are 5432/8000/3000.
+
+## 2. Original initial test runs
+
+These are the original pre-feature/pre-fix runs, not the later SQL regression or final 146-test suite. Backend errors were database setup errors; frontend failures included missing tooling/dependencies. No application or test source was changed to obtain the successful baseline runs.
+
+### First backend attempt: 15 setup errors
+
+Original command at 2026-10-15T08:15:17.681Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/backend`. Captures: 2026-10-15T08:16:04.418Z (source line 92); 2026-10-15T08:16:21.506Z (source line 101); 2026-10-15T08:16:31.499Z (source line 110).
+
+```bash
+../.venv/bin/python manage.py check; ../.venv/bin/python -m pytest -v
+```
+
+Exit 1. `manage.py check` passed, but PostgreSQL was not listening on the default localhost:5432. The capture itself was truncated by the original tool (75,322 original tokens / 6,158 lines); the excerpt preserves the real error and all 15 error-summary entries. A complete original traceback is not available.
+
+```text
+System check identified no issues (0 silenced).
+============================= test session starts ==============================
+platform darwin -- Python 3.12.11, pytest-8.4.2, pluggy-1.6.0 -- /Users/nitingupta/Desktop/taskboard/q-taskboard/.venv/bin/python
+cachedir: .pytest_cache
+django: version: 5.2.18, settings: taskboard.settings (from ini)
+rootdir: /Users/nitingupta/Desktop/taskboard/q-taskboard/backend
+configfile: pytest.ini
+plugins: django-4.14.0
+collecting ... collected 15 items
+
+projects/tests.py::TestProjects::test_create_project ERROR               [  6%]
+
+[Retained diagnostic excerpt; original tool output was already truncated from 6,158 lines.]
+E       psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: Connection refused
+E       connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+E       django.db.utils.OperationalError: connection to server at "localhost" (::1), port 5432 failed: Connection refused
+E       connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR projects/tests.py::TestProjects::test_create_project - django.db.utils....
+ERROR projects/tests.py::TestProjects::test_list_only_returns_member_projects
+ERROR projects/tests.py::TestProjects::test_get_project_detail - django.db.ut...
+ERROR projects/tests.py::TestProjects::test_non_member_cannot_view_project - ...
+ERROR projects/tests.py::TestTasks::test_create_task - django.db.utils.Operat...
+ERROR projects/tests.py::TestTasks::test_viewers_cannot_create_tasks - django...
+ERROR projects/tests.py::TestTasks::test_delete_task_requires_membership - dj...
+ERROR users/tests.py::TestRegister::test_creates_user_and_returns_token - dja...
+ERROR users/tests.py::TestRegister::test_rejects_short_password - django.db.u...
+ERROR users/tests.py::TestRegister::test_rejects_duplicate_email - django.db....
+ERROR users/tests.py::TestRegister::test_rejects_missing_name - django.db.uti...
+ERROR users/tests.py::TestLogin::test_returns_token_on_valid_credentials - dj...
+ERROR users/tests.py::TestLogin::test_rejects_wrong_password - django.db.util...
+ERROR users/tests.py::TestLogin::test_rejects_missing_email - django.db.utils...
+ERROR users/tests.py::TestLogin::test_rejects_unknown_email - django.db.utils...
+======================== 1 warning, 15 errors in 27.16s ========================
+```
+
+SHA-256 of the retained original output chunks before redaction: `cbaa609fcabbdfa201234b3fb60d2b5239f4dcbc4a471d4a90b357d2b0158075`.
+
+### First frontend command: test runner unavailable
+
+Original command at 2026-10-15T08:16:13.293Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:16:31.499Z (source line 110).
+
+```bash
+export PATH=/Users/nitingupta/.nvm/versions/node/v22.20.0/bin:$PATH
+npm test
+```
+
+Exit 127 while dependencies were still being installed: `vitest` was not yet available.
+
+```text
+> taskboard-frontend@1.0.0 test
+> vitest run
+
+sh: vitest: command not found
+```
+
+SHA-256 of the retained original output chunks before redaction: `b39c181d460ff2f32fa0df5e7f5e4b3e7ef074ab6d28e5857329eb7e3e556f8d`.
+
+### First completed frontend suite: six passes, one failed suite
+
+Original command at 2026-10-15T08:18:07.833Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:18:30.805Z (source line 162); 2026-10-15T08:19:06.698Z (source line 175); 2026-10-15T08:20:09.813Z (source line 195).
+
+```bash
+export PATH=/Users/nitingupta/.nvm/versions/node/v22.20.0/bin:$PATH
+npm test
+```
+
+Exit 1. Six schema tests passed; the TaskCard suite could not load because @testing-library/dom was missing. This is one failed suite, not six failed tests.
+
+```text
+> taskboard-frontend@1.0.0 test
+> vitest run
+
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v2.1.9 /Users/nitingupta/Desktop/taskboard/q-taskboard/frontend
+
+ ✓ src/tests/schemas.test.ts (6 tests) 22ms
+ ❯ src/tests/TaskCard.test.tsx (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/tests/TaskCard.test.tsx [ src/tests/TaskCard.test.tsx ]
+Error: Cannot find module '@testing-library/dom'
+Require stack:
+- /Users/nitingupta/Desktop/taskboard/q-taskboard/frontend/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.<anonymous> node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  6 passed (6)
+   Start at  13:48:21
+   Duration  45.41s (transform 2.65s, setup 16.61s, collect 1.04s, tests 22ms, environment 44.11s, prepare 6.64s)
+```
+
+SHA-256 of the retained original output chunks before redaction: `6c83c8f5d7ebeb37a161ffe10d5b3f80eab3e2ae53e5f21f196e5e36330c2a40`.
+
+### Frontend peer-dependency installation recovery
+
+Original command at 2026-10-15T08:22:21.990Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:22:55.326Z (source line 255).
+
+```bash
+mkdir -p /tmp/taskboard-npm-10.9.3 && tar -xzf /tmp/taskboard-npm-10.9.3.tgz -C /tmp/taskboard-npm-10.9.3
+export PATH=/Users/nitingupta/.nvm/versions/node/v22.20.0/bin:$PATH
+node /tmp/taskboard-npm-10.9.3/package/bin/npm-cli.js install --no-package-lock --no-audit --no-fund --legacy-peer-deps=false
+```
+
+Exit 0. This repaired the installed dependency tree with legacy peer handling disabled; it did not edit application/test/seed source.
+
+```text
+added 13 packages, removed 1 package, and changed 1 package in 10s
+```
+
+SHA-256 of the retained original output chunks before redaction: `87d1e4640c16954ce7b69252115c2ba6a95ab3f8eae346d50dc50e3a85a7934c`.
+
+### Recovered frontend baseline: 9 tests pass
+
+Original command at 2026-10-15T08:23:09.991Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:23:42.343Z (source line 273); 2026-10-15T08:24:01.706Z (source line 288).
+
+```bash
+export PATH=/Users/nitingupta/.nvm/versions/node/v22.20.0/bin:$PATH
+node /tmp/taskboard-npm-10.9.3/package/bin/npm-cli.js test
+```
+
+Final exit 0, 2 test files / 9 tests passed. The original output also contains a global-npm subprocess TypeError; it is preserved below, not hidden or described as a clean toolchain. Later static incident analysis investigated the damaged global npm and malicious config.
+
+```text
+> taskboard-frontend@1.0.0 test
+> vitest run
+
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v2.1.9 /Users/nitingupta/Desktop/taskboard/q-taskboard/frontend
+
+ ✓ src/tests/schemas.test.ts (6 tests) 8ms
+/Users/nitingupta/.nvm/versions/node/v22.20.0/lib/node_modules/npm/bin/npm-cli.js:2
+require('../lib/cli.js')(process)
+                        ^
+
+TypeError: require(...) is not a function
+    at Object.<anonymous> (/Users/nitingupta/.nvm/versions/node/v22.20.0/lib/node_modules/npm/bin/npm-cli.js:2:25)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49
+
+Node.js v22.20.0
+ ✓ src/tests/TaskCard.test.tsx (3 tests) 864ms
+   ✓ <TaskCard /> > renders the task title and assignee 334ms
+   ✓ <TaskCard /> > invokes onClick with the task when clicked 518ms
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Start at  13:53:15
+   Duration  21.74s (transform 818ms, setup 2.16s, collect 4.27s, tests 872ms, environment 18.55s, prepare 4.29s)
+```
+
+SHA-256 of the retained original output chunks before redaction: `3358cdd51ec1ad976e9c0aea1248072a35eac36485b6ad255e574045a9e0c87e`.
+
+### Recovered backend baseline: 15 tests pass
+
+Original command at 2026-10-15T08:21:37.313Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/backend`. Captures: 2026-10-15T08:22:04.406Z (source line 238); 2026-10-15T08:22:34.503Z (source line 245); 2026-10-15T08:22:55.326Z (source line 255); 2026-10-15T08:23:42.343Z (source line 273); 2026-10-15T08:24:01.706Z (source line 288); 2026-10-15T08:24:17.087Z (source line 295).
+
+```bash
+docker exec taskboard-inspection-db-20261015 pg_isready -U taskboard -d taskboard_inspection; docker exec taskboard-inspection-db-20261015 postgres --version; POSTGRES_DB=taskboard_inspection POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55432 ../.venv/bin/python manage.py migrate --noinput && POSTGRES_DB=taskboard_inspection POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55432 ../.venv/bin/python -m pytest -v --tb=short
+```
+
+Final exit 0 against the isolated PostgreSQL instance. Poll chunks are joined in their original order; all 15 test results and the final summary are retained.
+
+```text
+============================= test session starts ==============================
+platform darwin -- Python 3.12.11, pytest-8.4.2, pluggy-1.6.0 -- /Users/nitingupta/Desktop/taskboard/q-taskboard/.venv/bin/python
+cachedir: .pytest_cache
+django: version: 5.2.18, settings: taskboard.settings (from ini)
+rootdir: /Users/nitingupta/Desktop/taskboard/q-taskboard/backend
+configfile: pytest.ini
+plugins: django-4.14.0
+collecting ... collected 15 items
+
+projects/tests.py::TestProjects::test_create_project PASSED              [  6%]
+projects/tests.py::TestProjects::test_list_only_returns_member_projects PASSED [ 13%]
+projects/tests.py::TestProjects::test_get_project_detail PASSED          [ 20%]
+projects/tests.py::TestProjects::test_non_member_cannot_view_project PASSED [ 26%]
+projects/tests.py::TestTasks::test_create_task PASSED                    [ 33%]
+projects/tests.py::TestTasks::test_viewers_cannot_create_tasks PASSED    [ 40%]
+projects/tests.py::TestTasks::test_delete_task_requires_membership PASSED [ 46%]
+users/tests.py::TestRegister::test_creates_user_and_returns_token PASSED [ 53%]
+users/tests.py::TestRegister::test_rejects_short_password PASSED         [ 60%]
+users/tests.py::TestRegister::test_rejects_duplicate_email PASSED        [ 66%]
+users/tests.py::TestRegister::test_rejects_missing_name PASSED           [ 73%]
+users/tests.py::TestLogin::test_returns_token_on_valid_credentials PASSED [ 80%]
+users/tests.py::TestLogin::test_rejects_wrong_password PASSED            [ 86%]
+users/tests.py::TestLogin::test_rejects_missing_email PASSED             [ 93%]
+users/tests.py::TestLogin::test_rejects_unknown_email PASSED             [100%]
+
+======================== 15 passed in 117.01s (0:01:57) ========================
+```
+
+SHA-256 of the retained original output chunks before redaction: `51f3617a976b80c8140037784c57b4e85e61a1b451ef53145ca12cc71a8820d7`.
+
+### Original production-build attempt: type-check failure
+
+Original command at 2026-10-15T08:18:07.833Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend`. Captures: 2026-10-15T08:18:30.805Z (source line 162); 2026-10-15T08:22:04.406Z (source line 238).
+
+```bash
+export PATH=/Users/nitingupta/.nvm/versions/node/v22.20.0/bin:$PATH
+npm run build
+```
+
+Exit 2. This is the original build failure, not the current production-build result. Missing Jest/Node/DOM declarations and Symbol.asyncDispose types blocked TypeScript; subsequent build remediation and final passing build remain at their original later checkpoints.
+
+```text
+> taskboard-frontend@1.0.0 build
+> tsc && vite build
+
+node_modules/@testing-library/jest-dom/types/jest.d.ts(1,23): error TS2688: Cannot find type definition file for 'jest'.
+node_modules/@testing-library/jest-dom/types/jest.d.ts(9,27): error TS2304: Cannot find name 'expect'.
+node_modules/@testing-library/jest-dom/types/matchers.d.ts(1,29): error TS7016: Could not find a declaration file for module 'aria-query'. '/Users/nitingupta/Desktop/taskboard/q-taskboard/frontend/node_modules/aria-query/lib/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/aria-query` if it exists or add a new declaration (.d.ts) file containing `declare module 'aria-query';`
+node_modules/@testing-library/react/types/index.d.ts(9,8): error TS2307: Cannot find module '@testing-library/dom' or its corresponding type declarations.
+node_modules/@testing-library/react/types/index.d.ts(14,15): error TS2307: Cannot find module '@testing-library/dom' or its corresponding type declarations.
+node_modules/@vitest/utils/dist/index.d.ts(49,26): error TS2304: Cannot find name 'setImmediate'.
+node_modules/@vitest/utils/dist/index.d.ts(50,28): error TS2304: Cannot find name 'clearImmediate'.
+node_modules/rollup/dist/rollup.d.ts(1010,10): error TS2550: Property 'asyncDispose' does not exist on type 'SymbolConstructor'. Do you need to change your target library? Try changing the 'lib' compiler option to 'esnext' or later.
+node_modules/vite/dist/node/index.d.ts(1,23): error TS2688: Cannot find type definition file for 'node'.
+node_modules/vite/dist/node/index.d.ts(6,23): error TS2307: Cannot find module 'node:http' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(7,119): error TS2307: Cannot find module 'node:http' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(8,35): error TS2307: Cannot find module 'node:http2' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(9,21): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(10,25): error TS2307: Cannot find module 'node:events' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(11,30): error TS2307: Cannot find module 'node:events' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(12,76): error TS2307: Cannot find module 'node:https' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(13,22): error TS2307: Cannot find module 'node:net' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(14,22): error TS2307: Cannot find module 'node:url' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(15,21): error TS2307: Cannot find module 'node:url' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(16,25): error TS2307: Cannot find module 'node:stream' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(17,39): error TS2307: Cannot find module 'node:stream' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(20,38): error TS2307: Cannot find module 'node:tls' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(21,29): error TS2307: Cannot find module 'node:zlib' or its corresponding type declarations.
+node_modules/vite/dist/node/index.d.ts(309,35): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vite/dist/node/index.d.ts(391,11): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1014,40): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1084,55): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1102,39): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1119,55): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1137,39): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1154,55): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1172,39): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1189,38): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1201,56): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1210,38): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1222,59): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1237,18): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1237,41): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1242,24): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1242,47): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1247,39): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1247,48): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1278,25): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1309,24): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1309,33): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(1389,20): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(2401,63): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vite/dist/node/index.d.ts(3561,84): error TS2580: Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(4,26): error TS2307: Cannot find module 'node:stream' or its corresponding type declarations.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(18,23): error TS2307: Cannot find module 'node:fs' or its corresponding type declarations.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(271,10): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(286,19): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(287,18): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(292,45): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(292,90): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(2082,19): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(2645,13): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(2646,14): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/reporters.nr4dxCkA.d.ts(2647,14): error TS2503: Cannot find namespace 'NodeJS'.
+node_modules/vitest/dist/chunks/worker.B9FxPCaC.d.ts(1,29): error TS2307: Cannot find module 'node:worker_threads' or its corresponding type declarations.
+src/tests/TaskCard.test.tsx(2,18): error TS2305: Module '"@testing-library/react"' has no exported member 'screen'.
+src/tests/TaskCard.test.tsx(2,26): error TS2305: Module '"@testing-library/react"' has no exported member 'fireEvent'.
+```
+
+SHA-256 of the retained original output chunks before redaction: `bc9bd105c67c97cb88e2a4b619e09845e055fbd5bfc69361298db0c651821021`.
+
+### Authorized original seed load after baseline tests
+
+Original command at 2026-10-15T08:30:06.497Z; working directory `/Users/nitingupta/Desktop/taskboard/q-taskboard/backend`. Captures: 2026-10-15T08:30:24.761Z (source line 389).
+
+```bash
+POSTGRES_DB=taskboard_inspection POSTGRES_USER=taskboard POSTGRES_PASSWORD=<REDACTED> POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55432 ../.venv/bin/python manage.py seed
+```
+
+The user authorized bringing up seed data after the initial inspection. This historical command completed once at 08:30 UTC; it was not rerun during this recovery. The original fixture password is redacted. Existing seed data and audit comments remain untouched by the documentation correction.
+
+```text
+seeding...
+seed complete.
+login with any of these (password: <REDACTED>):
+  meera@taskboard.dev   — admin on Q3 Launch, Internal Tools
+  arjun@taskboard.dev   — admin on Onboarding, member on Q3 Launch
+  kavya@example.com     — member on Q3 Launch
+  dev@example.com       — viewer on Q3 Launch
+  lina@example.com      — member on Onboarding
+```
+
+SHA-256 of the retained original output chunks before redaction: `1b4b500e0afd3b6cade4e3c7a8be2fe79c2b83ddc6d68360fb91189142bf5888`.
 
 ## 3. Original code-review bug proof
 
@@ -1528,7 +2025,7 @@ Historical export evidence below records actual API calls. Independently compari
 }
 ```
 
-**MISSING VISUAL DELIVERABLE:** no Airtable screenshot or share link was found. API evidence proves remote writes/idempotency but does not prove the base UI was opened. README contains an explicit placeholder. The original brief requests pyairtable; the later user request explicitly selected the official npm SDK. That deviation is disclosed, not silently treated as literal rubric compliance.
+**Historical visual-evidence gap, subsequently resolved:** no Airtable screenshot or share link had been supplied at this export checkpoint. The actual [shared Tasks view](https://airtable.com/appC1ADL6s1JlxKAP/shrz8aTLD3nTVjoVk) was provided and opened without login during the later documentation correction; see the final verification checkpoint below. Its seven original exported task IDs were confirmed visible. The following sentences describe the earlier checkpoint: API evidence proves remote writes/idempotency but does not prove the base UI was opened. README contains an explicit placeholder. The supplied original assignment requires the official npm SDK, which this implementation uses. Earlier legacy-brief wording was incorrect and is superseded by the source correction at the end of this log.
 
 ### Airtable configuration checkpoint: paused before real API testing
 
@@ -3015,7 +3512,7 @@ Committed as `21988bd382afa17210bda543553054e642b14786` (`feat: add append-only 
 
 Implemented a recent project activity feed using the existing Django APIView/PostgreSQL and React/TanStack Query architecture. Events cover task creation, actual status changes, actual assignee changes, and new comments. Each contains a server-assigned actor/action/timestamp/project and task/change snapshots. GET /api/projects/:id/activity returns the latest 50 rows, newest first; admins, members and viewers can read, other users cannot. No event mutation routes or historical backfill were added.
 
-Rollback decision: the original task/comment operation and all its activity rows are in the same transaction.atomic() block. A failure rolls back the entire operation, including an already-inserted first event in a combined task update. Task updates lock the task before capturing the previous values. The rationale, scope, retention, and concurrency choices are documented in design_notes.md.
+Rollback decision: the original task/comment operation and all its activity rows are in the same transaction.atomic() block. A failure rolls back the entire operation, including an already-inserted first event in a combined task update. Task updates lock the task before capturing the previous values. The rationale, scope, retention, and concurrency choices are documented in [DESIGN_NOTES.md](DESIGN_NOTES.md) (originally named design_notes.md at this historical checkpoint).
 
 Task PATCH now enforces the existing project admin/member policy. The task UI initializes assignment from the existing nested server assignee to preserve it when saving a status. All event payloads are constructed server side. No-op updates and title/description-only edits do not create feed noise. Assignee comparisons use the persisted UUID, so uppercase and hyphenless UUID formats do not create false changes.
 
@@ -4587,7 +5084,7 @@ The five implementation/security commits remain separate. The history still cont
 
 README, REVIEW, design_notes and security_notes were checked/updated. README now includes explicit setup/test/environment instructions, seed cautions, source map, current inspection ports, SDK override, hook-capture limitations, and placeholders for the actual recording and Airtable visual proof. Final docs are deliberately uncommitted for review; REVIEW.md, TERMINAL_LOG.md and COMPLIANCE_AUDIT.md must still be included in a later authorized documentation commit before submission.
 
-**Submission blockers:** actual screen recording URL; actual Airtable screenshot/share link; absent original setup and initial-test transcripts; final documentation not committed. **Acceptance/timing concerns:** npm SDK chosen by later instruction instead of original pyairtable clause; original 90–100 minute timebox cannot be attested (retained review-to-activity timeline exceeds it), 24-hour receipt/deadline unknown, no configured/captured AI-conversation hook output. **Security blockers for a trusted deployment:** known signing-key forgery, dependency advisories, unverified credential rotation/host remediation, insecure development defaults and damaged global npm. No missing evidence or remediation is marked complete.
+**Submission blockers:** actual screen recording URL; actual Airtable screenshot/share link; absent original setup and initial-test transcripts; final documentation not committed. **Acceptance/timing concerns recorded at this historical checkpoint:** a mistaken npm/Python rubric comparison (corrected after reading the supplied original; official npm is required); original 90–100 minute timebox cannot be attested (retained review-to-activity timeline exceeds it), 24-hour receipt/deadline unknown, no configured/captured AI-conversation hook output. **Security blockers for a trusted deployment:** known signing-key forgery, dependency advisories, unverified credential rotation/host remediation, insecure development defaults and damaged global npm. No missing evidence or remediation is marked complete.
 
 ### Final artifact and worktree validation
 
@@ -4631,7 +5128,7 @@ Actual final git status (documentation changes only; HEAD unchanged):
 ?? TERMINAL_LOG.md
 ```
 
-No commit, squash, history rewrite or push was performed. Both existing loopback services remain running. The missing recording/Airtable visual proof/initial transcripts, pending documentation commit, original-SDK acceptance/timing concerns and open security issues are intentionally reported as incomplete.
+No commit, squash, history rewrite or push was performed. Both existing loopback services remain running. The missing recording/Airtable visual proof/initial transcripts, pending documentation commit, then-reported SDK/timing concerns and open security issues (the SDK concern was subsequently invalidated by the supplied original) are intentionally reported as incomplete.
 
 ### Subsequent prioritized security remediation and final verification
 
@@ -5239,7 +5736,7 @@ Actual rendered DOM observations:
 }
 ```
 
-The official npm package requirement is satisfied: `backend/airtable/package.json` pins `airtable@0.12.2`; `exporter.mjs` imports Airtable, constructs its client and calls base.makeRequest against api.airtable.com. The Django bridge is server-side. No pyairtable replacement was introduced. The original Python-SDK brief wording remains disclosed as superseded by the explicit npm instruction.
+The official npm package requirement is satisfied: `backend/airtable/package.json` pins `airtable@0.12.2`; `exporter.mjs` imports Airtable, constructs its client and calls base.makeRequest against api.airtable.com. The Django bridge is server-side. No pyairtable replacement was introduced. The supplied original Google document explicitly requires this official npm SDK; the earlier Python-SDK rubric claim was a legacy-source error, corrected below.
 
 The retained actual exports show 7 created, then 0 created/7 updated, remote counts 3→10→10 and unchanged record IDs; snapshots match stable task IDs, field values and unrelated records. This check made no new Airtable call. The user confirmed token revocation is not done and will rotate it manually. The running backend deliberately has an empty AIRTABLE_API_KEY override; an authorized export returns 503. This is a containment pause, not a newly introduced export failure or proof of a replacement token.
 
@@ -5288,3 +5785,122 @@ The scan covers all 201 reachable source-history objects at `e480e07` plus 85 wo
 This final documentation commit contains README.md, REVIEW.md, design_notes.md, security_notes.md, COMPLIANCE_AUDIT.md and TERMINAL_LOG.md, separately from `b5a444b` and `e480e07`. It preserves the earlier audit/history, supersedes the prior uncommitted-documents blocker, and leaves the user-provided recording and Airtable screenshot placeholders. No credentials, environment files or seed changes are included. A final post-commit clean-status check is reported to the user; the documentation commit cannot contain its own SHA.
 
 Python package compatibility check: `uv pip check --python .venv/bin/python` exited 0; all 27 installed package requirements are compatible. Three padding-only pytest diagnostic lines in historical failure output were normalized for Markdown whitespace checks; HTTP request/response text was preserved.
+
+
+## 8. Documentation corrections and direct submission-link verification
+
+Captured 2026-10-15T12:41:50.070607+00:00, after published baseline `b60463b`. This is a later verification checkpoint; historical missing-link/uncommitted/transcript-gap statements above describe their dated stages, not the present status. No application/test/seed source, live records, services or authentication configuration was changed for this documentation work. No old setup/test/seed commands or suspicious historical code were executed.
+
+### Authoritative original and filename correction
+
+Read the entire [user-supplied original assignment](https://docs.google.com/document/d/1Fj4td9MZYZyEH59_IrQGTmNQ9CKTq9OuN8RM6r7gha0/edit) through its text export. Its Part 3c explicitly requires the official `airtable` npm package. The legacy repository ASSIGNMENT.md differs; previous Python-SDK/override/acceptance-concern claims were source-selection errors. The implemented official npm SDK satisfies the original requirement directly. An AI-conversation archive is not a deliverable in that supplied original.
+
+Renamed `design_notes.md` to the required `DESIGN_NOTES.md` with the contents preserved; current Markdown links now use that exact case. Historical command/status output retains the filenames used at the time. REVIEW's original file/line links now target reviewed commit `5f58e52` instead of drifting current-file line numbers.
+
+### Genuine original setup and initial tests recovered
+
+Sections 1–2 now include original 08:14–08:30 UTC command/output captures recovered from the private local tool log. Each block identifies its command timestamp, original response line/time and original-output SHA-256. They show Node/ICU and database/tooling failures, successful dependency/migration/startup output, backend 15 setup errors → 15 passes, frontend unavailable runner → 6 passes/one failed suite → 9 passes, and the original TypeScript build failure. The user-authorized original seed load is recorded after those tests; it was not rerun.
+
+The original tool had already truncated the 6,158-line backend error traceback; the retained diagnostic and error summary are explicitly excerpts. No complete traceback or missing continuous terminal capture is invented. Only selected original tool commands/results were copied, with credentials redacted; private source logs are not submission artifacts.
+
+### Actual Airtable share-view check
+
+[Open the actual shared Tasks view](https://airtable.com/appC1ADL6s1JlxKAP/shrz8aTLD3nTVjoVk). Browser navigation returned HTTP 200 without sign-in. Read the rendered Tasks grid, captured a private screenshot, and compared visible stable IDs with the retained original second-export snapshot. All seven original exported IDs are present. The current view has five additional distinct IDs and three blank-ID rows; no cause/date for those later additions is inferred.
+
+```json
+{
+  "sharedViewUrl": "https://airtable.com/appC1ADL6s1JlxKAP/shrz8aTLD3nTVjoVk",
+  "publicBrowserNavigationHTTP": 200,
+  "signInRequired": false,
+  "table": "Tasks",
+  "visibleRowCount": 15,
+  "visibleStableTaskIds": 12,
+  "uniqueVisibleStableTaskIds": 12,
+  "allVisibleTaskIdsUnique": true,
+  "capturedVisibleTextSHA256": "2e032e2df4cbd6c196c7e33f98ee5647fd8826889c4573323fd67d3fb460cbce",
+  "airtableApiExportTriggered": false,
+  "remoteWritesPerformed": false,
+  "originalSecondExportTaskCount": 7,
+  "allOriginalSecondExportTaskIdsVisible": true,
+  "additionalVisibleStableTaskIdsSinceOriginalExport": 5
+}
+```
+
+This public visual proof fulfills the assignment's screenshot **or share-link** option; a separate screenshot is optional. The current 15-row view is not relabeled as the earlier 10-row second-export snapshot. The historical first/second real export evidence above remains 7 created, then 0 created/7 updated, counts 3→10→10 and unchanged seven Airtable record IDs. This verification only read the public share; it did not trigger another export or use the potentially exposed PAT. That token's revocation/host remediation remains unverified. Only the authorized public shared-view URL is included; no invitation/access-token URL or signed media URL is stored in the repository.
+
+### Actual Loom recording check
+
+[Open the recording](https://www.loom.com/share/5daf18e351574c57b6d9ce1c2878feaf). Public page access, decoded video/audio streams, actual caption text and sampled decoded frames were checked. The opening narration describes cloning/setup; later actual captions discuss review/SQL fix, Airtable upserts/retries, comments, transaction rollback/activity, JWT hardening and the final 146-test/build/migration result. Spoken statements were cross-checked against retained test/code evidence; the recording's generated summary is not treated as proof.
+
+```json
+{
+  "publicLoomUrl": "https://www.loom.com/share/5daf18e351574c57b6d9ce1c2878feaf",
+  "publicAccessVerified": true,
+  "videoCodecs": [
+    "h264"
+  ],
+  "audioCodecs": [
+    "aac"
+  ],
+  "maximumVideoDimensions": [
+    1728,
+    1080
+  ],
+  "playableDurationSeconds": 11743.146,
+  "sourceDurationSeconds": 11994.795,
+  "trimRangeCount": 118,
+  "trimmedSeconds": 251.649,
+  "actualCaptionCues": 1107,
+  "sampledFrameSeconds": [
+    15,
+    190,
+    555,
+    1300,
+    2350,
+    3300,
+    3630,
+    3670,
+    3700,
+    3750,
+    3810,
+    4000,
+    4600,
+    7000,
+    8400,
+    10800,
+    11700
+  ],
+  "terminalVisibleThroughout": false,
+  "browserOnlySampleSeconds": 555,
+  "continuousUncutCoverageVerified": false,
+  "sampledOcrCredentialMatches": 0,
+  "entireRecordingCredentialAbsenceVerified": false
+}
+```
+
+Verified visual examples: 00:00:15 shows the clone terminal; 00:09:15 shows a full-browser Airtable homepage with the terminal hidden; 01:56:40 shows the security-checkpoint terminal; 02:20:00 shows the comments result/activity request; 03:15:00 shows the final terminal results/documentation commit. Thus narration/stage coverage and link presence pass, but terminal visibility throughout fails literally. Loom reports 118 trimmed ranges (251.649 seconds); uninterrupted full-session coverage is not certified. Source and playable duration exceed the 90–100 minute assignment timebox. The 24-hour deadline cannot be verified without the receipt timestamp.
+
+OCR of 17 sampled video frames and the current public Airtable screenshot found no configured PAT/signing-key value or generic token pattern. This is a limited sample check, **not** proof that every video frame is credential-free. Raw frames, captions, source logs and signed media/cookie data remain outside Git.
+
+### Verification scope and publication
+
+This correction is documentation/filename-only. Previously completed code verification remains **98 backend + 36 frontend + 12 SDK tests = 146 passing**, production build passed and migrations current; no new code test/build run is claimed for these edits. Link/case, historical HTTP preservation, Markdown whitespace, sensitive-content and seed-source checks are performed on the corrected documents. The pre-publication baseline is `b60463b`. The final completion step creates a separate documentation commit and performs a normal master-to-origin/master push, then verifies local/remote HEAD equality and clean status. Its resulting SHA is reported at delivery; it cannot be embedded inside its own commit. No history rewriting is performed.
+
+
+Actual pre-publication documentation validation (no code tests were rerun for these Markdown-only changes):
+
+```json
+{
+  "configuredSecretsFoundOutsideAuthorizedPublicShareUrl": [],
+  "genericSecretPatternsFound": [],
+  "brokenLocalLinks": [],
+  "balancedMarkdownFences": true,
+  "historicalCommandAndHttpBlocksUnchanged": 312,
+  "designNotesCaseRenamePreservesContent": true,
+  "onlyMarkdownFilesChanged": true,
+  "seedSourceAndInitialMigrationsUnchanged": true,
+  "envFilesIgnoredAndUntracked": true,
+  "gitWhitespaceCheckPassed": true,
+  "applicationTestsRerunForDocumentationChange": false
+}
+```
