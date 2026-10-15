@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Provision the ignored server key without sending it to the terminal."""
+import argparse
+import os
+import re
+import secrets
+import tempfile
+from pathlib import Path
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--rotate', action='store_true', help='Replace an existing key and invalidate login sessions.')
+    args = parser.parse_args()
+    path = Path(__file__).resolve().parent.parent / '.env'
+    text = path.read_text() if path.exists() else ''
+    lines = text.splitlines(keepends=True)
+    pattern = re.compile(r'^\s*(?:export\s+)?DJANGO_SECRET_KEY\s*=')
+    existing = next((line.split('=', 1)[1].strip().strip("\"'") for line in lines if pattern.match(line)), '')
+    if existing and not existing.startswith('<') and not args.rotate:
+        os.chmod(path, 0o600)
+        print('Existing signing key left unchanged; use --rotate to replace it and invalidate sessions.')
+        return
+    updated = ''.join(line for line in lines if not pattern.match(line)).rstrip('\n')
+    updated += '\nDJANGO_SECRET_KEY=' + secrets.token_urlsafe(64) + '\n'
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='.env.', suffix='.local', delete=False) as stream:
+            temporary = Path(stream.name)
+            os.fchmod(stream.fileno(), 0o600)
+            stream.write(updated)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+    print('Signing key written to the ignored root .env with mode 0600; its value was not printed.')
+
+
+if __name__ == '__main__':
+    main()

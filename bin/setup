@@ -30,6 +30,9 @@ ENV
   chmod 600 .env
 fi
 
+# Existing keys are not silently rotated. Invalid keys fail settings validation.
+python bin/generate-signing-key
+
 echo "==> installing backend dependencies"
 cd backend
 pip install -r requirements.txt
