@@ -113,6 +113,18 @@ curl -H "Authorization: Bearer <token>" http://localhost:8000/api/projects
 - `PATCH /api/tasks/:id` — Update a task (authenticated)
 - `DELETE /api/tasks/:id` — Delete a task (admin or member)
 
+### Task comments
+- `GET /api/tasks/:id/comments` — Read a task's comments (project admin, member, or viewer)
+- `POST /api/tasks/:id/comments` — Append a comment (project admin or member)
+
+Open a task to see its comments below the existing task controls. The thread shows each author's name, comment body, and local timestamp, oldest first. Admins and members can post; viewers see a read-only thread. Comment text is rendered as plain text.
+
+Post JSON such as `{"body":"Ready for review."}`. Bodies must contain 1–5,000 characters after trimming. The server assigns the UUID, authenticated author, and timestamp; those fields cannot be supplied to edit an existing comment. Responses use `{"comments":[...]}` for reads and `{"comment":{...}}` with HTTP 201 for posts. Each comment contains `id`, `author` (`id`, `name`, `email`), `body`, and `createdAt`.
+
+Comments are append-only through the API: there are no comment edit/delete routes. Threads are scoped to the task's project membership, with stable ordering by `created_at` then UUID. Tasks and projects with comments return HTTP 409 on deletion to preserve history; deleting a task without comments continues to work normally. Browser comment caches are scoped to both the signed-in user and task.
+
+Apply the new table migration with `cd backend && python manage.py migrate`. No seed command or seed-data changes are required. Permission, ordering, immutability, and isolation tests are in `backend/projects/test_comments.py`; UI tests are in `frontend/src/tests/TaskComments.test.tsx`.
+
 ### Export
 - `POST /api/projects/:id/export` — Export tasks to Airtable (admin or member)
 

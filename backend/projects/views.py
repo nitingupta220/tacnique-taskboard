@@ -2,9 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import connection
+from django.db.models.deletion import ProtectedError
+from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import PermissionDenied
 from users.serializers import UserSerializer
 from .models import Project, Membership, Task
-from .serializers import ProjectDetailSerializer, TaskSerializer
+from .serializers import CommentSerializer, ProjectDetailSerializer, TaskSerializer
 from .airtable_export import ExportError, export_project_tasks
 
 
@@ -98,7 +101,10 @@ class ProjectDetailView(APIView):
             project = Project.objects.get(id=project_id)
         except Project.DoesNotExist:
             return Response({'error': 'not found'}, status=status.HTTP_404_NOT_FOUND)
-        project.delete()
+        try:
+            project.delete()
+        except ProtectedError:
+            return Response({'error': 'projects with task comments cannot be deleted'}, status=status.HTTP_409_CONFLICT)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -198,8 +204,37 @@ class TaskDetailView(APIView):
         if not _can_edit_tasks(membership.role):
             return Response({'error': 'viewers cannot delete tasks'}, status=status.HTTP_403_FORBIDDEN)
 
-        task.delete()
+        try:
+            task.delete()
+        except ProtectedError:
+            return Response({'error': 'tasks with comments cannot be deleted'}, status=status.HTTP_409_CONFLICT)
         return Response({'ok': True})
+
+
+class CommentListCreateView(APIView):
+    """Project members read; admins and members append. No update/delete methods."""
+
+    def _task_and_membership(self, request, task_id):
+        task = get_object_or_404(Task, id=task_id)
+        membership = _get_membership(request.user, task.project_id)
+        if not membership:
+            raise PermissionDenied('forbidden')
+        return task, membership
+
+    def get(self, request, task_id):
+        task, _ = self._task_and_membership(request, task_id)
+        comments = task.comments.select_related('author').all()
+        return Response({'comments': CommentSerializer(comments, many=True).data})
+
+    def post(self, request, task_id):
+        task, membership = self._task_and_membership(request, task_id)
+        if not _can_edit_tasks(membership.role):
+            return Response({'error': 'viewers cannot post comments'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = CommentSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'error': 'invalid comment', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        comment = serializer.save(task=task, author=request.user)
+        return Response({'comment': CommentSerializer(comment).data}, status=status.HTTP_201_CREATED)
 
 
 class MemberAddView(APIView):
