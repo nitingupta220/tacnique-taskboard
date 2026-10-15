@@ -111,13 +111,14 @@ class TaskListCreateView(APIView):
         if q:
             with connection.cursor() as cursor:
                 sql = (
-                    f"SELECT id, project_id, title, description, status, assignee_id, created_by_id, position, created_at, updated_at "
-                    f"FROM tasks "
-                    f"WHERE project_id = '{project_id}' "
-                    f"AND (title ILIKE '%{q}%' OR description ILIKE '%{q}%') "
-                    f"ORDER BY position ASC"
+                    "SELECT id, project_id, title, description, status, assignee_id, created_by_id, position, created_at, updated_at "
+                    "FROM tasks "
+                    "WHERE project_id = %s "
+                    "AND (title ILIKE %s OR description ILIKE %s) "
+                    "ORDER BY position ASC"
                 )
-                cursor.execute(sql)
+                pattern = f'%{q}%'
+                cursor.execute(sql, [str(project_id), pattern, pattern])
                 columns = [col[0] for col in cursor.description]
                 rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
             return Response({'tasks': rows})
