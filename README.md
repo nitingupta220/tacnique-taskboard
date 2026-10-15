@@ -1,77 +1,153 @@
 # TaskBoard — Project Management App
 
-A fullstack project management app for managing projects, tasks, and team members.
+React 18, Vite and TypeScript frontend; Django REST Framework/JWT backend; PostgreSQL database. Both task comments and project activity are implemented, together with real Airtable export.
 
-**Tech Stack:** React 18 + Vite + TypeScript (frontend) · Django 5 + Django REST Framework + SimpleJWT (backend) · PostgreSQL 16
+## Submission links
 
-## Quick Setup (Docker — Recommended)
+- Screen recording: **TODO — add your actual Loom or equivalent URL here.** The recording must narrate your thinking and keep the terminal visible. A placeholder does not satisfy submission.
+- Airtable screenshot or read-only share link: **TODO — attach the actual screenshot or link showing exported tasks.** Saved real API responses prove two exports; no Airtable screenshot/share link was found.
+- [Full compliance checklist and blockers](COMPLIANCE_AUDIT.md)
+- [Chronological redacted terminal evidence](TERMINAL_LOG.md)
+- [Original prioritized review](REVIEW.md), [rollback design](design_notes.md), [security findings](security_notes.md)
 
-```bash
-# Clone and enter the repo
-git clone <repo-url> && cd q-taskboard
+The original brief recovered from `84cb1a6:ASSIGNMENT.md` asks for `pyairtable`. The later explicit user instruction selected the official **Airtable npm package** instead. Django invokes that SDK server side. The current npm-package requirement is satisfied by `airtable@0.12.2`; it has not been replaced with a Python SDK. The original rubric wording remains a documented difference.
 
-# Start all services
-docker-compose up --build
+## Environment configuration
 
-# In a separate terminal, run migrations and seed
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py seed
+Create the root `.env` next to this README with mode `0600`. `.env` and `.env.example` are intentionally ignored, so a fresh clone may not have an example file. Enter actual secrets only in the ignored server file. Never put them in frontend files, `VITE_*` variables, chat, terminal output, or commits.
 
-# Run the test suites
-docker-compose exec backend python -m pytest          # Django tests
-docker-compose exec backend node --test airtable      # Airtable SDK tests
-docker-compose exec frontend npm test                 # React tests
-
-# The app is now running at http://localhost:3000
-# Backend API at http://localhost:8000
+```dotenv
+POSTGRES_DB=taskboard
+POSTGRES_USER=taskboard
+POSTGRES_PASSWORD=<unique-random-database-password>
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+DJANGO_SECRET_KEY=<unique-long-random-server-secret>
+DJANGO_ENV=development
+DEBUG=false
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,[::1]
+# Optional for a separately hosted browser client; leave empty with the Vite proxy:
+DJANGO_CORS_ALLOWED_ORIGINS=
+AIRTABLE_API_KEY=<personal-access-token>
+AIRTABLE_BASE_ID=<base-id>
+AIRTABLE_TABLE_NAME=Tasks
+# Optional if node is not on the backend PATH:
+# AIRTABLE_NODE_BINARY=/absolute/path/to/node
 ```
 
-## Manual Setup (without Docker)
+| Variable | Purpose |
+| --- | --- |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT` | Manual Django PostgreSQL connection. Pytest needs permission to create a separate test database. |
+| `DJANGO_SECRET_KEY` | Required private Django/JWT secret, at least 50 characters; missing, weak and development keys prevent startup. Generate it using the helper below. |
+| `DJANGO_ENV` | `development` for local HTTP or `production` to enforce production startup/transport checks. |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated backend hostnames. Production requires explicit hosts without wildcards. |
+| `DJANGO_CORS_ALLOWED_ORIGINS` | Optional comma-separated browser origins; defaults empty. Same-origin Vite proxy needs no CORS override. |
+| `DEBUG` | Defaults `false`; production refuses `true`. |
+| `AIRTABLE_API_KEY`, `AIRTABLE_BASE_ID`, `AIRTABLE_TABLE_NAME` | Backend-only Airtable credentials/table, required for real export. |
+| `AIRTABLE_NODE_BINARY` | Optional backend Node executable; defaults to `node`. |
+| `API_TARGET` | Vite proxy URL; defaults to `http://localhost:8000`. Contains no Airtable secret. |
 
-Requires: Python 3.12+, Node.js 20+, PostgreSQL 15+
+Generate a signing key without displaying its value:
 
 ```bash
-chmod +x bin/setup
-./bin/setup
+python3 bin/generate-signing-key
+```
 
-# Or manually:
+The helper creates/replaces an absent or placeholder key in the ignored root `.env`, preserves other credentials and uses mode `0600`. It leaves an existing key unchanged unless you explicitly run `python3 bin/generate-signing-key --rotate`. Rotation invalidates existing JWTs; restart the backend and sign in again. There is no public fallback or old-key grace period. Do not reuse keys between environments.
 
-# Backend
+Django loads the root `.env` without overriding deployed environment values. Compose requires database settings and the signing key from that environment/file; it passes Airtable settings only to the backend. Before a production deployment use a trusted host, fresh secrets from your secret manager, `DJANGO_ENV=production`, `DEBUG=false`, explicit hosts and a random database password of at least 16 characters. Production enables HTTPS redirects, secure cookies and one-year HSTS including subdomains/preload; deploy only with correctly configured TLS and ownership of the affected domain/subdomains. The supplied Compose stack is a loopback-bound development stack, not a production deployment. `manage.py check --deploy --fail-level WARNING` validates Django settings, not infrastructure or secret provenance.
+
+**Incident follow-up:** the potentially exposed Airtable token has not yet been revoked; the user will rotate it manually on a trusted device and reduce it to record read/write scopes. Real exports are currently paused by an empty backend runtime key override. After replacing the root `.env` token, restart the backend without that override before testing. Repository cleanup and signing-key rotation do not establish workstation eradication or revoke an Airtable token.
+
+## Docker setup
+
+Requires Docker Compose v2. Ports 5432, 8000 and 3000 must be free for a fresh stack.
+
+```bash
+git clone <repo-url>
+cd q-taskboard
+# Configure the ignored root .env first.
+docker compose up --build -d
+docker compose exec backend python manage.py migrate
+
+# ONLY for a brand-new, isolated database:
+# docker compose exec backend python manage.py seed
+
+# Verification
+docker compose exec backend python -m pytest
+docker compose exec --workdir /app/airtable backend node --test
+docker compose exec frontend npm test
+docker compose exec frontend npm run build
+docker compose exec backend python manage.py migrate --check
+docker compose exec backend python manage.py makemigrations --check --dry-run
+```
+
+Docker frontend: `http://localhost:3000`; API: `http://localhost:8000`. **Do not rerun seed on the existing review/demo database.** `bin/setup` also runs seed automatically; use the explicit steps here to preserve existing data. No seed command was run during the final audit. Docker instructions were reviewed against configuration; a new Docker image build was not performed during this audit.
+
+## Manual setup
+
+Requires Python 3.12+, a trusted Node.js 22.9+ installation with npm 11.6.4+, and PostgreSQL 15+ running with the configured database/user.
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
+npm --prefix backend/airtable ci --ignore-scripts
+npm --prefix frontend ci --ignore-scripts
+python3 bin/generate-signing-key
+# Configure the root .env before starting Django.
 cd backend
-pip install -r requirements.txt
-npm --prefix airtable ci --ignore-scripts
-# Create ../.env with the environment settings below, or copy your local .env.example.
 python manage.py migrate
-python manage.py seed
-python -m pytest
-node --test airtable
-
-# Frontend
-cd ../frontend
-npm install
-npm test
-npm run dev
+python manage.py runserver 127.0.0.1:8000
 ```
 
-## AI Tool Conversation Tracking
+In a second terminal, from the repository root:
 
-**This repository is configured to automatically capture your AI coding tool conversation history with each git commit.** This includes conversations from Claude Code, Cursor, Aider, Continue.dev, Cody, Cline, and Windsurf.
+```bash
+npm --prefix frontend run dev -- --host 127.0.0.1
+```
 
-This is part of the Ajackus evaluation process. We evaluate how you collaborate with AI tools — your prompting strategy, how you break down problems, and how you review AI suggestions. The captured conversations help us understand your workflow.
+## Tests, production build, and migrations
 
-**How it works:**
-- A pre-commit git hook runs automatically before each commit
-- It copies conversation files from AI tool directories (e.g., `.claude/`, `.cursor/`) into `.ai-conversations/`
-- These files are staged and included in your commit
-- You don't need to do anything — it happens automatically
+From the repository root with the virtualenv active and PostgreSQL configured:
 
-**What's captured:** Only AI tool conversation logs stored in the project directory. No system files, browsing history, or anything outside this repository.
+```bash
+(cd backend && python -m pytest -v --tb=short)
+(cd backend/airtable && node --test)
+(cd frontend && npm test)
+(cd frontend && npm run build)
+(cd backend && python manage.py migrate --check)
+(cd backend && python manage.py makemigrations --check --dry-run)
+(cd backend && python manage.py check)
+```
 
-**If you prefer a tool that doesn't store local conversations** (like browser-based ChatGPT), the screen recording will capture your interactions instead. No additional action needed from you.
+Pytest uses `taskboard.testing`, generates a temporary signing key, disables dotenv loading and clears real Airtable settings. For a manual test run, export the five `POSTGRES_*` connection settings in the backend test terminal (they are not loaded from `.env` by pytest); the database role must be able to create a test database. Compose already supplies these settings. Pytest creates that isolated PostgreSQL test database and applies migrations there. Airtable tests use fake settings and a local HTTP server; they do not export to the real base. The frontend build emits `frontend/dist`; it does not establish that Django or Compose are production-ready.
+
+This workstation's global npm CLI was found truncated during incident investigation. Verification used the integrity-verified Node toolchain under `/tmp/taskboard-security/toolchain` and the verified npm 11.6.4 CLI under `/tmp/taskboard-hardening/npm11`, with sandboxed build/test processes and real credentials excluded. These temporary tools are local verification aids, not a prerequisite for a fresh clone. Use a trusted installed runtime or Docker on a clean host. The frontend now uses ESM configuration. A dependency-refresh attempt with npm 10.9.3 hit an internal resolver error; use the verified npm 11.6.4 toolchain used for the successful refresh. Build/test commands receive no real Airtable credentials. Tailwind 4 requires Safari 16.4+, Chrome 111+ or Firefox 128+.
+
+## Current inspection runtime
+
+The already-running inspection instance uses frontend `http://127.0.0.1:3000`, backend `http://127.0.0.1:8001`, PostgreSQL host port `55432`, and database `taskboard_inspection`. For that backend, the frontend proxy setting is `API_TARGET=http://127.0.0.1:8001`. These differ from fresh Docker defaults; avoid starting another stack on occupied ports. Both servers are running after the signing-key/dependency changes. Sign in again because previous JWTs were invalidated. The running backend intentionally returns HTTP 503 for exports until the potentially exposed Airtable token is replaced and its empty runtime override is removed.
+
+Demo records are in separate non-seed projects. Activity demo: `/projects/d3e76a9c-3a56-4eaa-8446-72444b287b4d`. All original seed rows and pre-existing audit comments remain unchanged. Existing activity was not backfilled.
+
+## Project structure
+
+- `backend/taskboard/settings.py` and `urls.py`: environment/database/JWT settings and API routing.
+- `backend/users/`: user model, password-based login/registration, JWT issuance and current-user API.
+- `backend/projects/models.py`: projects, role memberships, tasks, append-only comment API storage, and activity events; schema changes are under `migrations/`.
+- `backend/projects/views.py`, `serializers.py`, `urls.py`: project-scoped authorization, task search/writes, comments, activity, and export endpoint.
+- `backend/projects/airtable_export.py` and `backend/airtable/exporter.mjs`: server-only Django-to-Node bridge and official SDK batching/upserts/retries.
+- `frontend/src/pages/ProjectPage.tsx`: Kanban board, export trigger, and recent activity. `components/TaskDetail.tsx`, `TaskComments.tsx`, `ProjectActivity.tsx`, and `ExportButton.tsx` contain the existing UI flows.
+- `frontend/src/lib/api-client.ts`: authenticated API requests and browser session storage. Tests live in `backend/projects/test_*.py`, `backend/projects/tests.py`, `backend/users/tests.py`, `backend/airtable/exporter.test.mjs`, and `frontend/src/tests/`.
+
+## AI tool conversation tracking
+
+The supplied `.git-hooks/pre-commit` copies supported project-local AI conversation files into `.ai-conversations/` when that hook directory is configured and executable. The audit found no `core.hooksPath` and no captured conversation directory, so automatic capture cannot be claimed for the existing commits. `bin/setup` configures hooks but also seeds the database. To configure hooks separately on a fresh checkout, use `git config core.hooksPath .git-hooks` and ensure the hook is executable. Review any captured content for secrets before committing. The actual recording link is still required above.
 
 ## Seed Data
 
-All user passwords are: `password123`
+These are public local demo fixtures; do not provision production accounts from this database. All seeded user passwords are: `password123`
 
 | Email | Role |
 |-------|------|
@@ -140,7 +216,7 @@ Enter credentials in the **root `.env`** (next to this README), then restart the
 ```dotenv
 POSTGRES_DB=taskboard
 POSTGRES_USER=taskboard
-POSTGRES_PASSWORD=taskboard
+POSTGRES_PASSWORD=<unique-random-database-password>
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 AIRTABLE_API_KEY=<personal-access-token>
@@ -168,26 +244,34 @@ Project admins and members see **export to Airtable** on the project detail page
 {"total":3,"created":1,"updated":1,"failed":1,"failures":[{"taskId":"<uuid>","title":"Example task","error":"Airtable rejected the field values. Check the table schema and task."}]}
 ```
 
-The Django service invokes a small server-side Node process using the **official `airtable` npm package**, installed in `backend/airtable`. Node 20+ must be on the backend PATH; `AIRTABLE_NODE_BINARY` can select another executable. Docker includes Node and the package. No additional service or local export state is required.
+The Django service invokes a small server-side Node process using the **official `airtable` npm package**, installed in `backend/airtable`. Node 22.9+ must be on the backend PATH; `AIRTABLE_NODE_BINARY` can select another executable. Docker includes Node and the package. No additional service or local export state is required.
 
 Exports support up to 1,000 tasks, read Airtable records in pages of 100, and write batches of 10 with Airtable `performUpsert` keyed by `Task ID`. Repeated exports update the same records, including after an ambiguous network failure. Existing duplicate Task IDs are reported as failures for those tasks. Unrelated rows and extra Airtable columns are preserved; exports do not delete remote rows or change local tasks.
 
 Calls are spaced by at least 250 ms. Transient connection errors, HTTP 500/502/503/504, and rate limits get at most two retries. Backoff is 500 ms then 1 second for server/network errors, or 30 then 60 seconds for rate limits; the SDK's automatic rate-limit retries are disabled. A 120-second budget bounds the export. Permanent failures have no backoff retry. Rejected multi-record batches (413/422) are split into smaller diagnostic batches to isolate invalid records, then other tasks continue; a rejected singleton is not retried. Global credential/schema errors stop further API calls and report remaining tasks as failed. Failed or uncertain tasks can safely be exported again.
 
-Run `python -m pytest` from `backend`, `node --test` from `backend/airtable`, and `npm test` from `frontend`. Automated tests use fake credentials and a local HTTP server, never the configured real base. `backend/projects/airtable_mock.py` is a legacy test double and is not used by the integration.
+Run `python -m pytest` from `backend`, `node --test` from `backend/airtable`, and `npm test` from `frontend`. Automated tests use fake credentials and a local HTTP server, never the configured real base. There is no `backend/projects/airtable_mock.py` in this checkout; the integration uses the server-side SDK bridge and its tests.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18, Vite 5, TypeScript 5 (strict) |
-| Routing | React Router 6 |
+| Frontend | React 18, Vite 6, TypeScript 5 (strict) |
+| Routing | React Router 7 |
 | Data fetching | TanStack Query 5 |
-| Styling | Tailwind CSS 3 |
-| Frontend tests | Vitest 2 + Testing Library |
+| Styling | Tailwind CSS 4 |
+| Frontend tests | Vitest 4 + Testing Library |
 | Backend | Django 5, Django REST Framework 3 |
 | Auth | djangorestframework-simplejwt (JWT, 30-day tokens) |
 | ORM | Django ORM |
 | Database | PostgreSQL 16 |
 | Backend tests | pytest-django |
 | Container | Docker + docker-compose |
+
+## Final verification
+
+JWT impersonation is fixed in `b5a444b`; the same live forged request changes from HTTP 200 to 401 after signing-key rotation, and a fresh legitimate login still works. Dependency remediation is separate in `e480e07`. Final results: **98 backend + 36 frontend + 12 Airtable SDK tests = 146 passing**, production TypeScript/Vite build passed, all migrations applied, no model drift, and a production-mode Django deployment check passed with warnings treated as failures using disposable configuration. Fresh npm audits report zero vulnerabilities for both projects; OSV reports no findings for the 27 installed Python packages. These scans do not certify the host or a production deployment.
+
+The retained real Airtable responses show **7 created, then 0 created / 7 updated**; remote rows remain **3 → 10 → 10**, with the same seven Airtable record IDs and one row per stable task UUID. They were rechecked against saved snapshots without new external calls. A future replacement token has not been tested because revocation/rotation is still pending. The current backend pauses exports with HTTP 503 until that follow-up is complete.
+
+Original seed rows, all existing audit comments and demo activity are unchanged by hardening. Commits remain separate and nothing has been pushed. The recording and Airtable visual-proof placeholders above are for the user to complete; original setup/initial-test transcripts, workstation eradication and assignment timing remain explicitly unverified in the compliance checklist.

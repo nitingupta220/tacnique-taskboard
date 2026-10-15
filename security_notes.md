@@ -2,7 +2,7 @@
 
 Date: 2026-10-15. Scope: the executable payload appended to `frontend/postcss.config.js`, related project entry points and dependencies, and possible credential exposure.
 
-**Finding: confirmed malicious remote-code loader, critical impact on the developer account.** The loader has been removed. The production build and all 66 existing tests pass. No affected service was restarted. Repository cleanup does not establish that the workstation or previously accessible credentials are safe.
+**Finding: confirmed malicious remote-code loader, critical impact on the developer account.** At the security-remediation checkpoint, the loader was removed, the production build and all 66 then-existing tests passed, and no affected service was restarted. Later user-authorized service startups and final results are recorded below. Repository cleanup does not establish that the workstation or previously accessible credentials are safe.
 
 ## Investigation method and evidence
 
@@ -33,7 +33,7 @@ e32657baf631d7c5f4dc67b4b2ee0ec8e7d5b3c41860e09cddce7c0377cd80bc
 
 During the preceding build attempt, process inspection observed child PID 54679 running an obfuscated `node -e` program and an established TCP connection to `154[.]91[.]0[.]20:443`. That observation was already recorded before this investigation. The child, build, and frontend dev server were stopped. A TCP connection on port 443 alone does not establish the protocol or the contents transferred. No packet capture or remote payload response was retained.
 
-Private evidence and verification logs are retained under `/tmp/taskboard-security` (directory mode 0700). The original and decoded samples are inert `.txt` files, not committed. Earlier connection evidence is also in `/tmp/taskboard-airtable/build-issue.json` and the local `TERMINAL_log.md`. Historical infected commits remain unsafe to run; history was not rewritten.
+Private evidence and verification logs are retained under `/tmp/taskboard-security` (directory mode 0700). The original and decoded samples are inert `.txt` files, not committed. Earlier connection evidence is also in `/tmp/taskboard-airtable/build-issue.json` and the local `TERMINAL_LOG.md`. Historical infected commits remain unsafe to run; history was not rewritten.
 
 ## Recovered behavior
 
@@ -91,18 +91,18 @@ The installed Node 22.20.0 executable matches the official Node distribution. Co
 
 The Python requirements contain the expected application/test packages. Metadata compatibility checks pass for all 27 installed distributions. This virtualenv has no `pip` module, so `pip check` was unavailable; dependency requirements were checked through package metadata instead. This was not a full Python vulnerability audit.
 
-### Separate dependency advisories remain
+### Historical dependency advisories (before final hardening)
 
 The frontend npm audit reported **15 affected package entries: 2 critical, 6 high, 7 moderate**. These include inherited dependency findings, not 15 independently reproduced Taskboard exploits. They are separate from the malicious repository implant. The separate Airtable npm project audit reported **zero advisories**.
 
 | Area | Current versions | Reported concern / follow-up |
 | --- | --- | --- |
 | Vitest / Tinypool | 2.1.9 / 1.1.1 | [Vitest UI-server file execution](https://github.com/advisories/GHSA-5xrq-8626-4rwp), [worker-options prototype-pollution gadget](https://github.com/advisories/GHSA-5gmw-xhrv-c9v3), and [run-options gadget](https://github.com/advisories/GHSA-85c8-ppgw-ccpr). No Vitest UI/API service was enabled for validation. |
-| Vite / esbuild | 5.4.21 / 0.21.5 | Development-server file access / origin advisories; keep affected dev services stopped pending a reviewed upgrade. |
+| Vite / esbuild | 5.4.21 / 0.21.5 | Development-server file access / origin advisories; review upgrades before exposing affected development services; the later loopback-only startup is described below. |
 | Tailwind and parser/glob dependencies | 3.4.19 | Pattern/selector resource-exhaustion advisories. |
 | React Router | 6.30.6 | Redirect and SSR-hydration advisories reported by the registry; application exploitability was not established here. |
 
-Several suggested remediations require major upgrades of Vite, Vitest, Tailwind, or React Router. This commit preserves all dependency versions and records these upgrades as follow-up work. The complete audit JSON remains in `/tmp/taskboard-security/audit.log`; audit exited nonzero because advisories remain.
+Several suggested remediations require major upgrades of Vite, Vitest, Tailwind, or React Router. The incident-removal commit `1c87642` preserved dependency versions and recorded upgrades as follow-up work; the later hardening section records their completion. The complete audit JSON remains in `/tmp/taskboard-security/audit.log`; audit exited nonzero because advisories remain.
 
 ## Remediation and validation
 
@@ -130,6 +130,52 @@ The build retains existing Vite CJS / ESM-package-type warnings; they do not fai
 1. From a trusted device, revoke the potentially exposed Airtable token and create a replacement with only the necessary base and record permissions. Review the base's available access/activity history for unexpected record or schema changes. Configure the replacement locally without placing it in chat or Git.
 2. Assess other credentials and sessions accessible to this account during the execution window, and revoke/rotate as appropriate. Repository cleanup cannot invalidate stolen credentials.
 3. Investigate the workstation for downloaded payloads and persistence using endpoint/process/network telemetry; repair the damaged global npm installation from a trusted distribution. Re-establish a trusted execution environment before starting services with fresh credentials.
-4. Plan the dependency upgrades identified by the audit, with compatibility testing. The frontend dev server remains stopped.
+4. Dependency upgrades and compatibility testing were subsequently completed as described below. The frontend dev server was stopped at the incident checkpoint; later authorized startup and hardening are recorded separately.
 
 No claim of complete host eradication or verified absence of exfiltration is made. The confirmed repository loader is removed and the cleaned application has passed the checks above.
+
+## Final security hardening — 2026-10-15
+
+The previous sections are historical incident checkpoints. The later authorized hardening is committed separately as `b5a444b` (JWT/configuration) and `e480e07` (dependencies). No infected historical config was executed or contacted during this work.
+
+### Verified JWT impersonation: fixed
+
+SimpleJWT inherited Django's public fallback `SECRET_KEY`; Compose also hardcoded a public key. A caller could generate an HS256 token naming another user's UUID without that user's password. The live read-only proof used the same curl configuration and identical short-lived forged JWT before and after remediation: `GET /api/users/me` returned **200 before and 401 after**, seven seconds apart, within the token's validity period. Request SHA-256 values match; the other public development key is also rejected. A fresh legitimate login and authenticated GET both return 200. Full redacted HTTP evidence is in TERMINAL_LOG.md.
+
+`backend/taskboard/settings.py` now requires a private signing secret of at least 50 characters, rejects known development/placeholder patterns and weak repeated strings, and explicitly uses that secret for HS256. There is no fallback or old-key grace period. Compose requires the key from server environment configuration. `bin/generate-signing-key` provisions a random 64-byte secret in the ignored root `.env` atomically, preserves other settings, uses mode 0600 and never prints its value. Explicit `--rotate` was used locally; old sessions are invalidated and users must sign in again. Airtable credentials were left untouched.
+
+Production mode requires debug disabled, explicit non-wildcard hosts and a strong database password. CORS defaults closed; security, CSRF and frame middleware are enabled. Production also enables HTTPS redirection, secure cookies and HSTS; deployment must supply trusted secrets and correctly configured TLS/domain handling. Compose binds the demo stack to loopback. These checks cannot determine whether an externally supplied secret was stolen or a production host is trustworthy. No production deployment or production-secret inspection is claimed.
+
+`backend/users/test_security.py` adds 17 cases covering invalid startup configuration, both old-key forgeries, valid authentication, security headers and private/idempotent key provisioning. Pytest uses `taskboard.testing`, disables real dotenv loading, generates a temporary key and clears Airtable settings. The complete backend suite passes (98 tests). A production-mode `manage.py check --deploy --fail-level WARNING`, using disposable configuration values rather than production credentials, returns no warnings.
+
+### Dependency remediation: verified
+
+| Component | Verified version / change | Reason |
+| --- | --- | --- |
+| Vite | 6.4.4 | Patched supported 6.x line replaces affected 5.x. |
+| Vitest | 4.1.11 | Patched 4.x release removes the vulnerable earlier Vitest/Tinypool chain. |
+| React Router DOM | 7.18.4; React stays 18.3.1 | No unaffected 6.x release was available for the reported advisory. Existing declarative routes remain compatible in tests/browser checks. |
+| Tailwind / PostCSS plugin | 4.3.3 / 4.3.3 | Removes affected v3 glob/selector-parser dependency paths without forcing incompatible transitive overrides. |
+| pytest | 9.1.1; requirement >=9.0.3,<10 | Fixes the Unix temporary-directory advisory affecting pytest <=9.0.2 (GHSA-6w46-j5rx-g56g / PYSEC-2026-1845 are aliases for one issue). |
+| Container Node stages | Node 22 | Replaces the older Node 20 stages. A new Docker image build was not performed. |
+
+PostCSS now loads only `@tailwindcss/postcss`; Tailwind 4 imports the existing theme config, and a base rule preserves button cursors. This legitimate configuration update supersedes the earlier restored 81-byte hash. Current PostCSS SHA-256: `4cae941be9bc3bee9a6905e47ea7a51aee216d587d34a8cc4ae48f78fd6d8159`. Vite/Vitest now use ESM and URL-based aliases. The before/after browser captures show the board and eight activity entries; opening a task shows the existing comment and Arjun assignment without writes. The browser baseline is Safari 16.4+, Chrome 111+ or Firefox 128+ under Tailwind 4.
+
+Fresh npm audits report **zero vulnerabilities** in frontend and backend/airtable. An OSV query of all 27 installed Python distributions reports no known findings after the pytest upgrade; this is advisory coverage, not proof that all code is vulnerability-free. Frontend tests (36), SDK tests (12), TypeScript/Vite production build and all database migration checks pass. The sole backend warning deliberately arises while constructing a token with a weak historical key in a negative regression test; the application rejects that token.
+
+The first npm 10.9.3 dependency refresh failed inside npm's peer resolver (`edgesOut`); no application workaround or forced dependency override was applied. A separately downloaded npm 11.6.4 archive was verified against official registry integrity metadata, then completed the clean install with lifecycle scripts disabled. All 267 locked frontend packages have official registry URLs and integrity fields. Build/test processes had no real Airtable credentials, were denied root `.env` reads, and had networking blocked except loopback where needed. The virtualenv lacks pip; its pytest upgrade used uv against PyPI. Setup issues and actual outputs are preserved in the terminal log.
+
+Primary references: [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/), [SimpleJWT signing settings](https://django-rest-framework-simplejwt.readthedocs.io/en/stable/settings.html), [Vite migration](https://vite.dev/guide/migration.html), [Vitest migration](https://vitest.dev/guide/migration/), [Tailwind upgrade guide](https://tailwindcss.com/docs/upgrade-guide), [pytest changelog](https://docs.pytest.org/en/stable/changelog.html).
+
+### Official Airtable npm package retained
+
+`backend/airtable/package.json` pins `airtable@0.12.2`; `exporter.mjs` imports it, constructs the official client and calls its `base.makeRequest` against `https://api.airtable.com`. Django invokes the checked-in bridge without a shell; its tests exercise the real SDK against a local fake HTTP endpoint. This satisfies the user's explicit npm requirement; it has not been replaced by pyairtable. [Official Airtable JavaScript SDK source](https://github.com/Airtable/airtable.js) identifies that npm package. The original assignment's Python-SDK wording remains a documented rubric difference, not an unimplemented npm integration.
+
+### External incident follow-up remains open
+
+- The user explicitly confirmed that the potentially exposed Airtable token **has not yet been revoked** and will be rotated manually. Its temporary schema-write permission must also be removed from the replacement token. Only the account holder can revoke it; no credential value is printed here. Real exports are paused by an empty backend runtime key override (authorized export requests return 503). No real Airtable requests or schema/data writes were made during this hardening. Historical successful 7-created/7-updated exports remain evidence of earlier integration behavior, not validation of a new token.
+- Investigating workstation persistence, reviewing other accessible account credentials/sessions and re-establishing a trusted host remain unverified. The damaged global npm installation is untouched. Credential absence from Git/build assets cannot prove absence of exfiltration. Do not deploy from the previously affected host as though repository remediation established host eradication.
+- Unsafe original PostCSS code remains in old commits under the no-history-rewrite instruction; do not execute those revisions. Current executable configuration is legitimate.
+- The broader frontend/backend field-naming mismatch remains technical debt; the verified task-editor unassignment bug is fixed and its regression passes.
+
+The original seed rows and existing audit comments were preserved. The final repository security fixes and advisory checks pass; incident closure and submission recordings/screenshots remain external follow-ups. See [COMPLIANCE_AUDIT.md](COMPLIANCE_AUDIT.md) and [TERMINAL_LOG.md](TERMINAL_LOG.md) for explicit evidence gaps and checks.
