@@ -21,6 +21,20 @@ export type ApiComment = {
   createdAt: string;
 };
 
+type ActivityTask = { taskId: string; taskTitle: string };
+type ActivityAssignee = { id: string; name: string } | null;
+export type ApiActivity = {
+  id: string;
+  projectId: string;
+  actor: ApiUser;
+  createdAt: string;
+} & (
+  | { action: "task_created"; details: ActivityTask & { status: TaskStatus; assignee: ActivityAssignee } }
+  | { action: "status_changed"; details: ActivityTask & { from: TaskStatus; to: TaskStatus } }
+  | { action: "assignee_changed"; details: ActivityTask & { from: ActivityAssignee; to: ActivityAssignee } }
+  | { action: "comment_added"; details: ActivityTask & { commentId: string; body: string } }
+);
+
 export type ApiTask = {
   id: string;
   projectId: string;

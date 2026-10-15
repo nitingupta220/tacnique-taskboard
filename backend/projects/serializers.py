@@ -1,6 +1,17 @@
 from rest_framework import serializers
 from users.serializers import UserSerializer
-from .models import Project, Membership, Task, Comment
+from .models import Project, Membership, Task, Comment, Activity
+
+
+class ActivitySerializer(serializers.ModelSerializer):
+    actor = UserSerializer(read_only=True)
+    projectId = serializers.UUIDField(source='project_id', read_only=True)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
+
+    class Meta:
+        model = Activity
+        fields = ['id', 'projectId', 'actor', 'action', 'details', 'createdAt']
+        read_only_fields = fields
 
 
 class CommentSerializer(serializers.ModelSerializer):

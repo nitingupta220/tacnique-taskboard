@@ -1,0 +1,25 @@
+# Project activity feed
+
+Each successful task creation, actual status change, actual assignee change, and comment addition records an `Activity` row. The row stores a server-assigned actor, action, timestamp, project, and JSON details. Details include the stable task UUID and title at the time of the operation. Status/assignee changes contain `from` and `to`; creation contains the initial status/assignee; comment events contain the new comment UUID and body. An assignment snapshot contains the user's UUID and name, or `null` for unassigned. A combined task update records separate status and assignee events. No-op updates and title/description-only edits produce no events.
+
+## Transaction and rollback decision
+
+**The operation and its activity records succeed or fail together.** The three write endpoints use `transaction.atomic()`: task creation, task update, and comment creation. Activity is inserted synchronously inside that transaction. If either the original write or any activity insert fails, Django rolls back all writes from that request, including an earlier event from a combined update. The request fails rather than reporting success with a missing or partial feed entry. Errors propagate out of the atomic block; they are not caught and suppressed inside it.
+
+Task updates acquire a row lock with `select_for_update()` before reading the original status/assignee. Concurrent updates to the same task therefore compare against the last committed state. Events and API responses use the saved task reloaded from the database; equivalent uppercase or hyphenless assignee UUIDs therefore count as unchanged. A transaction can create multiple rows, so events are ordered by server timestamp and descending UUID to break timestamp ties deterministically. A tied timestamp does not imply a separate commit order.
+
+An `on_commit` callback or background queue would allow the original operation to commit before its activity was persisted, so neither is used. Transactions cover this PostgreSQL database only. Airtable exports are unchanged and do not generate these events. Failed operations do not emit events; retrying a successful comment/task creation is still a new creation under the existing API behavior.
+
+## Authorization and retention
+
+`GET /api/projects/:id/activity` requires an explicit project membership, including for owners. Admins, members, and viewers can read; unauthenticated requests return 401 and non-members return 403. All feed filtering happens on the backend. There is no client API for creating, editing, or deleting activity records. Task updates now check the same admin/member policy used by task creation and comments, preventing outsiders and viewers from writing changes into another project's feed.
+
+The feed returns `{"activities":[...]}` with at most the latest 50 events, newest first. Each event contains `id`, `projectId`, `actor` (`id`, `name`, `email`), `action`, `details`, and `createdAt`. An index on project/timestamp/UUID supports the bounded query. No pagination service or generalized event framework is needed for this recent-activity view.
+
+Task references in details are snapshots rather than cascading foreign keys: deleting an uncommented task leaves its project activity readable. The actor foreign key protects attribution from user deletion. Deleting a project deletes its activity; this feed is project history, not an independent compliance archive. Existing protections against deleting tasks/projects with comments remain in force. The migration creates an empty table; no historical events are invented, and no seed rows or existing comments are changed.
+
+## Frontend and verification
+
+The existing project detail page mounts a `ProjectActivity` component using the existing API client and TanStack Query. Task creation, task updates, and comment posts invalidate the project's feed. Query caches include both the project and current user, and feed errors hide stale results. Text is rendered as ordinary React text. The task dialog initializes its assignee from the server's existing nested `assignee` object as well as the typed `assigneeId`, so saving a status does not unintentionally clear an existing assignment.
+
+Backend tests cover all roles, project isolation, newest-first/tied ordering, the 50-row bound, server attribution, event payloads, no-op edits, unchanged existing comments, deleted task snapshots, denied/invalid writes, and database rollback. Rollback tests use real PostgreSQL transactions and insert real operation/event rows before raising a simulated persistence error; the combined-update test fails after its second event insertion and verifies that both events and the task update disappear. Frontend tests cover rendering, safe text, loading/errors, cache isolation, and refresh after each supported UI write. Live curl and browser verification use a separate demo project and preserve existing rows byte-for-byte in a private baseline comparison. Evidence is appended to the local `TERMINAL_log.md`.

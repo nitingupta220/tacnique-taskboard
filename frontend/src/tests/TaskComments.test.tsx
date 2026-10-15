@@ -17,7 +17,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 }
 
 function renderComments(role?: Role) {
-  return render(<TaskComments taskId="task-1" role={role} />, { wrapper });
+  return render(<TaskComments taskId="task-1" projectId="project-1" role={role} />, { wrapper });
 }
 
 afterEach(() => {
@@ -116,7 +116,7 @@ describe("<TaskComments />", () => {
     }))));
     const { rerender } = renderComments("viewer");
     await screen.findByText(earlier.body);
-    rerender(<TaskComments taskId="task-2" role="viewer" />);
+    rerender(<TaskComments taskId="task-2" projectId="project-1" role="viewer" />);
     await screen.findByText(later.body);
     expect(screen.queryByText(earlier.body)).not.toBeInTheDocument();
   });
@@ -129,7 +129,7 @@ describe("<TaskComments />", () => {
     const { rerender } = renderComments("member");
     await screen.findByText(earlier.body);
     localStorage.setItem("taskboard_user", JSON.stringify({ ...author, id: "outsider" }));
-    rerender(<TaskComments taskId="task-1" />);
+    rerender(<TaskComments taskId="task-1" projectId="project-1" />);
     expect(screen.queryByText(earlier.body)).not.toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("forbidden");
     expect(screen.queryByText(earlier.body)).not.toBeInTheDocument();

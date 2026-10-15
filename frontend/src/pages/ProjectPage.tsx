@@ -6,6 +6,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { Header } from "@/components/Header";
 import { StatusColumn } from "@/components/StatusColumn";
 import { TaskDetail } from "@/components/TaskDetail";
+import { ProjectActivity } from "@/components/ProjectActivity";
 import type { ApiProjectDetail, ApiTask, TaskStatus } from "@/types";
 import { STATUS_ORDER } from "@/types";
 
@@ -37,6 +38,7 @@ export default function ProjectPage() {
     onSuccess: () => {
       setNewTitle("");
       queryClient.invalidateQueries({ queryKey: ["project", id] });
+      queryClient.invalidateQueries({ queryKey: ["project-activity", id] });
     },
     onError: (err) => setError(err instanceof Error ? err.message : "create failed"),
   });
@@ -148,6 +150,8 @@ export default function ProjectPage() {
                 />
               ))}
             </div>
+
+            <ProjectActivity key={project.id} projectId={project.id} />
 
             <section className="mt-10">
               <h2 className="text-sm font-medium mb-3">members</h2>

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, getStoredUser } from "@/lib/api-client";
 import type { ApiComment, Role } from "@/types";
 
-export function TaskComments({ taskId, role }: { taskId: string; role?: Role }) {
+export function TaskComments({ taskId, projectId, role }: { taskId: string; projectId: string; role?: Role }) {
   const [body, setBody] = useState("");
   const queryClient = useQueryClient();
   const queryKey = ["task-comments", getStoredUser()?.id, taskId];
@@ -18,7 +18,10 @@ export function TaskComments({ taskId, role }: { taskId: string; role?: Role }) 
     }),
     onSuccess: async () => {
       setBody("");
-      await queryClient.invalidateQueries({ queryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey }),
+        queryClient.invalidateQueries({ queryKey: ["project-activity", projectId] }),
+      ]);
     },
   });
   const canPost = role === "admin" || role === "member";
