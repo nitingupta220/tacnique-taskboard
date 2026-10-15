@@ -4,7 +4,7 @@ React 18, Vite and TypeScript frontend; Django REST Framework/JWT backend; Postg
 
 ## Submission links
 
-- Screen recording: **TODO — add your actual Loom or equivalent URL here.** The recording must narrate your thinking and keep the terminal visible. A placeholder does not satisfy submission.
+- Screen recording: [Watch the Loom recording](https://www.loom.com/share/5daf18e351574c57b6d9ce1c2878feaf). The recording must narrate your thinking and keep the terminal visible.
 - Airtable screenshot or read-only share link: **TODO — attach the actual screenshot or link showing exported tasks.** Saved real API responses prove two exports; no Airtable screenshot/share link was found.
 - [Full compliance checklist and blockers](COMPLIANCE_AUDIT.md)
 - [Chronological redacted terminal evidence](TERMINAL_LOG.md)
@@ -274,4 +274,4 @@ JWT impersonation is fixed in `b5a444b`; the same live forged request changes fr
 
 The retained real Airtable responses show **7 created, then 0 created / 7 updated**; remote rows remain **3 → 10 → 10**, with the same seven Airtable record IDs and one row per stable task UUID. They were rechecked against saved snapshots without new external calls. A future replacement token has not been tested because revocation/rotation is still pending. The current backend pauses exports with HTTP 503 until that follow-up is complete.
 
-Original seed rows, all existing audit comments and demo activity are unchanged by hardening. Commits remain separate and nothing has been pushed. The recording and Airtable visual-proof placeholders above are for the user to complete; original setup/initial-test transcripts, workstation eradication and assignment timing remain explicitly unverified in the compliance checklist.
+Original seed rows, all existing audit comments and demo activity are unchanged by hardening. Commits remain separate. The recording link is included above; the Airtable visual-proof placeholder remains for the user to complete. Original setup/initial-test transcripts, workstation eradication and assignment timing remain explicitly unverified in the compliance checklist.
